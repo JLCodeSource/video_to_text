@@ -16,7 +16,7 @@ install:
 
 # Use `uv run` for all runtime targets so commands run inside the project's environment
 test:
-	@uv run pytest -q
+	@uv run pytest -v --cov=./ --cov-report=term-missing
 
 ruff-check:
 	@uv run ruff check .
