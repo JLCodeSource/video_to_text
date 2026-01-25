@@ -12,24 +12,26 @@ class TestFindExistingChunks:
     """Test finding existing chunk files."""
     
     def test_find_no_chunks_when_none_exist(self) -> None:
-        """Given: audio path with no chunks, When: find_existing_chunks called, Then: empty list returned."""
+        """Should return empty list when no chunk files exist."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Given: audio path with no chunk files
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("dummy")
             
             with patch('main.OpenAI'):
                 transcriber = VideoTranscriber("key")
+                # When: find_existing_chunks is called
                 chunks = transcriber.find_existing_chunks(audio_path)
                 
+                # Then: empty list is returned
                 assert chunks == []
     
     def test_find_existing_chunks(self) -> None:
-        """Given: audio path with multiple chunk files, When: find_existing_chunks called, Then: all chunks returned in order."""
+        """Should return all chunk files in order."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Given: audio path with multiple chunk files
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("dummy")
-            
-            # Create chunk files
             chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
             chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
             chunk2 = Path(tmpdir) / "audio_chunk2.mp3"
@@ -39,20 +41,21 @@ class TestFindExistingChunks:
             
             with patch('main.OpenAI'):
                 transcriber = VideoTranscriber("key")
+                # When: find_existing_chunks is called
                 chunks = transcriber.find_existing_chunks(audio_path)
                 
+                # Then: all chunks are returned in order
                 assert len(chunks) == 3
                 assert chunks[0] == chunk0
                 assert chunks[1] == chunk1
                 assert chunks[2] == chunk2
     
     def test_find_chunks_sorted_correctly(self) -> None:
-        """Given: audio chunks created out of order, When: find_existing_chunks called, Then: chunks returned in numeric order."""
+        """Should return chunks sorted numerically even if created out of order."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Given: audio chunks created in reverse order on filesystem
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("dummy")
-            
-            # Create chunks in reverse order
             chunk2 = Path(tmpdir) / "audio_chunk2.mp3"
             chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
             chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
@@ -62,20 +65,25 @@ class TestFindExistingChunks:
             
             with patch('main.OpenAI'):
                 transcriber = VideoTranscriber("key")
+                # When: find_existing_chunks is called
                 chunks = transcriber.find_existing_chunks(audio_path)
                 
+                # Then: chunks are returned sorted by numeric index
                 assert chunks[0].name == "audio_chunk0.mp3"
                 assert chunks[1].name == "audio_chunk1.mp3"
                 assert chunks[2].name == "audio_chunk2.mp3"
     
     def test_find_chunks_parent_directory_not_exists(self) -> None:
-        """Given: audio path with non-existent parent directory, When: find_existing_chunks called, Then: empty list returned."""
+        """Should return empty list gracefully when parent directory doesn't exist."""
+        # Given: audio path with non-existent parent directory
         audio_path = Path("/nonexistent/directory/that/does/not/exist/audio.mp3")
         
         with patch('main.OpenAI'):
             transcriber = VideoTranscriber("key")
+            # When: find_existing_chunks is called
             chunks = transcriber.find_existing_chunks(audio_path)
             
+            # Then: empty list is returned gracefully
             assert chunks == []
 
 
@@ -83,22 +91,25 @@ class TestCleanupAudioFiles:
     """Test cleanup of audio and chunk files."""
     
     def test_cleanup_removes_main_audio_file(self) -> None:
-        """Given: main audio file exists, When: cleanup_audio_files called, Then: main file deleted."""
+        """Should delete main audio file."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Given: main audio file exists
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("audio data")
-            
             assert audio_path.exists()
             
             with patch('main.OpenAI'), patch('builtins.print'):
                 transcriber = VideoTranscriber("key")
+                # When: cleanup_audio_files is called
                 transcriber.cleanup_audio_files(audio_path)
                 
+                # Then: main audio file is deleted
                 assert not audio_path.exists()
     
     def test_cleanup_removes_chunk_files(self) -> None:
-        """Given: main audio and chunk files exist, When: cleanup_audio_files called, Then: all files deleted."""
+        """Should delete main audio file and all associated chunk files."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Given: main audio file and chunk files exist
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("audio")
             chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
@@ -108,20 +119,24 @@ class TestCleanupAudioFiles:
             
             with patch('main.OpenAI'), patch('builtins.print'):
                 transcriber = VideoTranscriber("key")
+                # When: cleanup_audio_files is called
                 transcriber.cleanup_audio_files(audio_path)
                 
+                # Then: main audio and all chunk files are deleted
                 assert not audio_path.exists()
                 assert not chunk0.exists()
                 assert not chunk1.exists()
     
     def test_cleanup_handles_missing_files(self) -> None:
-        """Given: audio file doesn't exist, When: cleanup_audio_files called, Then: no error raised."""
+        """Should handle missing files gracefully without raising errors."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Given: audio file doesn't exist
             audio_path = Path(tmpdir) / "audio.mp3"
             
             with patch('main.OpenAI'), patch('builtins.print'):
                 transcriber = VideoTranscriber("key")
-                # Should not raise an exception
+                # When: cleanup_audio_files is called
+                # Then: no exception is raised (graceful handling)
                 transcriber.cleanup_audio_files(audio_path)
 
 
@@ -129,8 +144,9 @@ class TestCleanupAudioChunks:
     """Test cleanup of chunk files only."""
     
     def test_cleanup_removes_only_chunks(self) -> None:
-        """Given: main audio and chunk files exist, When: cleanup_audio_chunks called, Then: only chunks deleted."""
+        """Should delete only chunk files, keeping main audio file."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Given: main audio file and chunk files exist
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("audio")
             chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
@@ -140,10 +156,12 @@ class TestCleanupAudioChunks:
             
             with patch('main.OpenAI'), patch('builtins.print'):
                 transcriber = VideoTranscriber("key")
+                # When: cleanup_audio_chunks is called
                 transcriber.cleanup_audio_chunks(audio_path)
                 
-                assert audio_path.exists()  # Main file still exists
-                assert not chunk0.exists()   # Chunks deleted
+                # Then: only chunk files are deleted, main audio file remains
+                assert audio_path.exists()
+                assert not chunk0.exists()
                 assert not chunk1.exists()
 
 
@@ -151,8 +169,9 @@ class TestTranscribeChunkedAudioKeepChunks:
     """Test keeping chunk files during transcription."""
     
     def test_keep_chunks_false_deletes_chunks(self) -> None:
-        """Given: large audio file, When: transcribe_chunked_audio with keep_chunks=False, Then: chunks deleted after transcription."""
+        """Should delete chunks after transcription when keep_chunks=False."""
         with patch('main.OpenAI') as mock_openai:
+            # Given: mock Whisper API and chunk files
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.side_effect = ["chunk1", "chunk2"]
@@ -160,8 +179,6 @@ class TestTranscribeChunkedAudioKeepChunks:
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
                 audio_path.write_text("dummy")
-                
-                # Create temporary chunk files
                 chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
                 chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
                 chunk0.write_text("c0")
@@ -172,6 +189,7 @@ class TestTranscribeChunkedAudioKeepChunks:
                     
                     with patch('builtins.print'):
                         transcriber = VideoTranscriber("key")
+                        # When: transcribe_chunked_audio is called with keep_chunks=False
                         result = transcriber.transcribe_chunked_audio(
                             audio_path, 
                             duration=600.0,
@@ -180,14 +198,15 @@ class TestTranscribeChunkedAudioKeepChunks:
                             keep_chunks=False
                         )
                         
+                        # Then: chunks are deleted after transcription
                         assert result == "chunk1 chunk2"
-                        # Verify chunks were deleted
                         assert not chunk0.exists()
                         assert not chunk1.exists()
     
     def test_keep_chunks_true_keeps_chunks(self) -> None:
-        """Given: large audio file, When: transcribe_chunked_audio with keep_chunks=True, Then: chunks kept after transcription."""
+        """Should keep chunks after transcription when keep_chunks=True."""
         with patch('main.OpenAI') as mock_openai:
+            # Given: mock Whisper API and chunk files
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.side_effect = ["chunk1", "chunk2"]
@@ -195,8 +214,6 @@ class TestTranscribeChunkedAudioKeepChunks:
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
                 audio_path.write_text("dummy")
-                
-                # Create temporary chunk files
                 chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
                 chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
                 chunk0.write_text("c0")
@@ -207,6 +224,7 @@ class TestTranscribeChunkedAudioKeepChunks:
                     
                     with patch('builtins.print'):
                         transcriber = VideoTranscriber("key")
+                        # When: transcribe_chunked_audio is called with keep_chunks=True
                         result = transcriber.transcribe_chunked_audio(
                             audio_path,
                             duration=600.0,
@@ -215,8 +233,8 @@ class TestTranscribeChunkedAudioKeepChunks:
                             keep_chunks=True
                         )
                         
+                        # Then: chunks are kept after transcription
                         assert result == "chunk1 chunk2"
-                        # Verify chunks were NOT deleted
                         assert chunk0.exists()
                         assert chunk1.exists()
 
@@ -225,8 +243,9 @@ class TestTranscribeWithKeepAudio:
     """Test transcribe method with keep_audio parameter."""
     
     def test_transcribe_keep_audio_true_keeps_files(self) -> None:
-        """Given: small video file, When: transcribe with keep_audio=True, Then: audio file kept."""
+        """Should keep audio file after transcription when keep_audio=True."""
         with patch('main.OpenAI') as mock_openai:
+            # Given: mock Whisper API for small file transcription
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = "transcript"
@@ -241,14 +260,17 @@ class TestTranscribeWithKeepAudio:
                      patch.object(VideoTranscriber, 'extract_audio'), \
                      patch('builtins.print'):
                     transcriber = VideoTranscriber("key")
+                    # When: transcribe is called with keep_audio=True
                     result = transcriber.transcribe(video_path, audio_path, keep_audio=True)
                     
+                    # Then: audio file is kept after transcription
                     assert result == "transcript"
-                    assert audio_path.exists()  # File kept
+                    assert audio_path.exists()
     
     def test_transcribe_keep_audio_false_deletes_files(self) -> None:
-        """Given: small video file, When: transcribe with keep_audio=False, Then: audio file deleted."""
+        """Should delete audio file after transcription when keep_audio=False."""
         with patch('main.OpenAI') as mock_openai:
+            # Given: mock Whisper API for small file transcription
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = "transcript"
@@ -263,17 +285,19 @@ class TestTranscribeWithKeepAudio:
                      patch.object(VideoTranscriber, 'extract_audio'), \
                      patch('builtins.print'):
                     transcriber = VideoTranscriber("key")
+                    # When: transcribe is called with keep_audio=False
                     result = transcriber.transcribe(video_path, audio_path, keep_audio=False)
                     
+                    # Then: audio file is deleted after transcription
                     assert result == "transcript"
-                    assert not audio_path.exists()  # File deleted
+                    assert not audio_path.exists()
 
 
 class TestTranscribeLargeWithKeepAudio:
     """Test transcribe with large files and keep_audio parameter."""
     
     def test_large_file_keep_audio_true_keeps_chunks(self) -> None:
-        """Given: large video file, When: transcribe with keep_audio=True, When: chunks kept after transcription."""
+        """Should keep chunks for large files when keep_audio=True."""
         with patch('main.OpenAI') as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
@@ -305,8 +329,9 @@ class TestTranscribeLargeWithKeepAudio:
                     assert chunk1.exists()
     
     def test_large_file_keep_audio_false_deletes_chunks(self) -> None:
-        """Given: large video file, When: transcribe with keep_audio=False, Then: chunks deleted after transcription."""
+        """Should delete chunks for large files when keep_audio=False."""
         with patch('main.OpenAI') as mock_openai:
+            # Given: mock Whisper API and large audio file requiring chunking
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.side_effect = ["chunk1", "chunk2"]
@@ -316,7 +341,6 @@ class TestTranscribeLargeWithKeepAudio:
                 video_path.touch()
                 audio_path = Path(tmpdir) / "audio.mp3"
                 audio_path.write_text("x" * (30 * 1024 * 1024))
-                
                 chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
                 chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
                 chunk0.write_text("c0")
@@ -328,14 +352,13 @@ class TestTranscribeLargeWithKeepAudio:
                      patch.object(VideoTranscriber, 'extract_audio_chunk') as mock_extract, \
                      patch('builtins.print'):
                     mock_extract.side_effect = [chunk0, chunk1]
-                    
                     transcriber = VideoTranscriber("key")
+                    # When: transcribe is called with keep_audio=False
                     _ = transcriber.transcribe(video_path, audio_path, keep_audio=False)
                     
-                    # Verify chunks are deleted
+                    # Then: chunks are deleted after transcription
                     assert not chunk0.exists()
                     assert not chunk1.exists()
-                    # Main audio file also deleted when keep_audio=False
                     assert not audio_path.exists()
 
 
@@ -343,8 +366,9 @@ class TestForceOverwriteWithExistingChunks:
     """Test force overwrite with existing chunk files."""
     
     def test_force_overwrite_with_existing_chunks(self) -> None:
-        """Given: existing audio and chunk files, When: transcribe with force=True, Then: all files recreated."""
+        """Should pass force flag correctly when re-extracting audio."""
         with patch('main.OpenAI') as mock_openai:
+            # Given: existing audio and chunk files
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = "new_transcript"
@@ -354,8 +378,6 @@ class TestForceOverwriteWithExistingChunks:
                 video_path.touch()
                 audio_path = Path(tmpdir) / "audio.mp3"
                 audio_path.write_text("old audio")
-                
-                # Create old chunk files
                 old_chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
                 old_chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
                 old_chunk0.write_text("old_chunk0")
@@ -365,12 +387,12 @@ class TestForceOverwriteWithExistingChunks:
                      patch.object(VideoTranscriber, 'extract_audio') as mock_extract, \
                      patch('builtins.print'):
                     transcriber = VideoTranscriber("key")
+                    # When: transcribe is called with force=True
                     transcriber.transcribe(video_path, audio_path, force=True, keep_audio=True)
                     
-                    # Verify force=True was passed to extract_audio
+                    # Then: force flag is properly passed to extract_audio
                     mock_extract.assert_called_once()
-                    # extract_audio is called with (video_path, audio_path, force)
-                    assert mock_extract.call_args[0][2] is True  # Third positional argument
+                    assert mock_extract.call_args[0][2] is True
 
 
 if __name__ == "__main__":
