@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import math
 import os
 import re
@@ -225,33 +226,55 @@ class VideoTranscriber:
         *,
         keep_chunks: bool = False,
     ) -> str:
-        """Transcribe audio by splitting into chunks."""
+        """Transcribe audio by splitting into chunks.
+
+        This method will reuse existing chunk files when they already exist and
+        match the expected number of chunks. The actual transcription and
+        per-chunk cleanup logic is delegated to `_transcribe_chunk_files` to
+        reduce cyclomatic complexity.
+        """
         print(f"Splitting into {num_chunks} chunks ({chunk_duration:.1f}s each)...")
 
-        transcripts: list[str] = []
-        chunk_files: list[Path] = []
-        for i in range(num_chunks):
-            start_time: float = i * chunk_duration
-            end_time: float = min((i + 1) * chunk_duration, duration)
+        # Determine chunk file list: reuse existing or create new ones
+        existing_chunks = self.find_existing_chunks(audio_path)
+        if existing_chunks and len(existing_chunks) == num_chunks:
+            chunk_files = existing_chunks
+        else:
+            chunk_files = []
+            for i in range(num_chunks):
+                start_time: float = i * chunk_duration
+                end_time: float = min((i + 1) * chunk_duration, duration)
 
-            # Extract and transcribe chunk
-            chunk_path: Path = self.extract_audio_chunk(audio_path, start_time, end_time, i)
-            chunk_files.append(chunk_path)
-            print(f"Transcribing chunk {i + 1}/{num_chunks}...")
-            transcript: str = self.transcribe_audio_file(chunk_path)
-            # Shift timestamps in transcript by chunk start_time so they are absolute
-            if transcript and start_time > 0:
-                transcript = self._shift_formatted_timestamps(transcript, start_time)
-            transcripts.append(transcript)
+                # Extract chunk file
+                chunk_path: Path = self.extract_audio_chunk(audio_path, start_time, end_time, i)
+                chunk_files.append(chunk_path)
 
-            # Clean up chunk file unless keeping chunks
-            if not keep_chunks:
-                chunk_path.unlink()
+        transcripts = self._transcribe_chunk_files(chunk_files, chunk_duration, keep_chunks=keep_chunks)
 
         if keep_chunks and chunk_files:
             print(f"Kept {len(chunk_files)} chunk files for reference")
 
         return " ".join(transcripts)
+
+    def _transcribe_chunk_files(self, chunk_files: list[Path], chunk_duration: float, *, keep_chunks: bool) -> list[str]:
+        """Transcribe provided chunk files and optionally remove them.
+
+        Using `contextlib.suppress` to ignore unlink errors and keeping this
+        logic isolated reduces complexity in the main method.
+        """
+        transcripts: list[str] = []
+        for i, chunk_path in enumerate(chunk_files):
+            start_time = i * chunk_duration
+            print(f"Transcribing chunk {i + 1}/{len(chunk_files)}...")
+            transcript: str = self.transcribe_audio_file(chunk_path)
+            if transcript and start_time > 0:
+                transcript = self._shift_formatted_timestamps(transcript, start_time)
+            transcripts.append(transcript)
+            if not keep_chunks:
+                with contextlib.suppress(Exception):
+                    chunk_path.unlink()
+
+        return transcripts
 
     def _shift_formatted_timestamps(self, formatted: str, offset_seconds: float) -> str:
         """Shift MM:SS timestamps in formatted transcript by offset_seconds."""

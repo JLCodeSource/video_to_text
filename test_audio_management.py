@@ -374,6 +374,43 @@ class TestTranscribeLargeWithKeepAudio:
                     assert not chunk1.exists()
                     assert not audio_path.exists()
 
+    class TestUseExistingChunks:
+        """Ensure existing chunk files are used instead of re-extraction."""
+
+        def test_transcribe_uses_existing_chunks(self) -> None:
+            with patch("main.OpenAI") as mock_openai:
+                mock_client = MagicMock()
+                mock_openai.return_value = mock_client
+                mock_client.audio.transcriptions.create.side_effect = ["chunk1", "chunk2"]
+
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    video_path = Path(tmpdir) / "video.mp4"
+                    video_path.touch()
+                    audio_path = Path(tmpdir) / "audio.mp3"
+                    # make file large enough to trigger chunking
+                    audio_path.write_text("x" * (30 * 1024 * 1024))
+
+                    # Create existing chunk files that should be reused
+                    chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
+                    chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
+                    chunk0.write_text("c0")
+                    chunk1.write_text("c1")
+
+                    with (
+                        patch.object(VideoTranscriber, "validate_video_file", return_value=video_path),
+                        patch.object(VideoTranscriber, "extract_audio"),
+                        patch.object(VideoTranscriber, "get_audio_duration", return_value=600.0),
+                        patch.object(VideoTranscriber, "extract_audio_chunk") as mock_extract,
+                        patch("builtins.print"),
+                    ):
+                        transcriber = VideoTranscriber("key")
+                        _ = transcriber.transcribe(video_path, audio_path, keep_audio=True)
+
+                        # extract_audio_chunk should not be called because chunks exist
+                        mock_extract.assert_not_called()
+                        assert chunk0.exists()
+                        assert chunk1.exists()
+
 
 class TestForceOverwriteWithExistingChunks:
     """Test force overwrite with existing chunk files."""
