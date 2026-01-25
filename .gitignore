@@ -1,6 +1,7 @@
 # Custom
 *.mp3
 *.mp4
+*.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
