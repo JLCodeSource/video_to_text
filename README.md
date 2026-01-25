@@ -66,6 +66,11 @@ Testing
 	 unit tests for audio extraction, chunking, timestamp formatting, and the CLI
 	 wiring.
 
+Continuous Integration
+ - The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that
+   runs `make install` followed by `make lint` and `make test` on pushes and pull
+   requests to `main`. This mirrors the recommended local `make install` setup.
+
 Acknowledgements
  - This project was developed with test-driven iterations and linting guidance.
  - Parts of the implementation and assistance during development were produced
