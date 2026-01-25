@@ -35,7 +35,6 @@ jobs:
       # created without binary/source attachments until packaging is revisited.
 
       - name: Create GitHub Release
-        id: create_release
         uses: actions/create-release@v1
         with:
           tag_name: ${{ github.ref_name }}
