@@ -25,10 +25,19 @@ class VideoTranscriber:
         return video_path
     
     def resolve_audio_path(self, video_path: Path, audio_path: Path | None) -> Path:
-        """Resolve audio file path."""
+        """Resolve audio file path, ensuring .mp3 extension."""
         if audio_path is None:
             return video_path.with_suffix(".mp3")
-        return audio_path
+        # Custom audio path handling
+        if audio_path.suffix.lower() == ".mp3":
+            # Already has .mp3 extension, accept as-is
+            return audio_path
+        elif audio_path.suffix == "":
+            # No extension, add .mp3
+            return audio_path.with_suffix(".mp3")
+        else:
+            # Different extension, raise error
+            raise ValueError(f"Audio file must have .mp3 extension, got: {audio_path}")
     
     def extract_audio(self, video_path: Path, audio_path: Path, force: bool = False) -> None:
         """Extract audio from video file if it doesn't exist or force is True."""
@@ -186,7 +195,10 @@ def get_api_key(api_key_arg: str | None) -> str:
 
 
 def save_transcript(output_path: Path, transcript: str) -> None:
-    """Save transcript to a file."""
+    """Save transcript to a file, ensuring .txt extension."""
+    # Ensure output path has .txt extension
+    if output_path.suffix.lower() != ".txt":
+        output_path = output_path.with_suffix(".txt")
     output_path.write_text(transcript)
     print(f"\nTranscript saved to: {output_path}")
 

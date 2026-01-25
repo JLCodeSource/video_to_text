@@ -84,16 +84,115 @@ class TestResolveAudioPath:
             assert result == Path("/path/to/video.mp3")
     
     def test_resolve_audio_path_custom(self) -> None:
-        """Should return custom audio_path when provided."""
-        # Given: VideoTranscriber, video path, and custom audio path
+        """Should accept custom audio_path with .mp3 extension."""
+        # Given: VideoTranscriber, video path, and custom audio path with .mp3
         with patch('main.OpenAI'):
             transcriber = VideoTranscriber("key")
             video_path = Path("/path/to/video.mp4")
-            audio_path = Path("/custom/audio.wav")
-            # When: resolve_audio_path is called with custom audio_path
+            audio_path = Path("/custom/audio.mp3")
+            # When: resolve_audio_path is called with .mp3 audio_path
             result = transcriber.resolve_audio_path(video_path, audio_path)
-            # Then: custom audio_path is returned as-is
+            # Then: custom audio_path is returned unchanged
             assert result == audio_path
+
+
+class TestAudioPathExtensionHandling:
+    """Test .mp3 extension requirement for audio paths."""
+    
+    def test_custom_audio_without_extension_gets_mp3(self) -> None:
+        """Should automatically add .mp3 to custom audio path without extension."""
+        # Given: custom audio path without any extension
+        with patch('main.OpenAI'):
+            transcriber = VideoTranscriber("key")
+            video_path = Path("/path/to/video.mp4")
+            audio_path = Path("/custom/myaudio")  # No extension
+            
+            # When: resolve_audio_path is called with path lacking extension
+            result = transcriber.resolve_audio_path(video_path, audio_path)
+            
+            # Then: .mp3 extension is automatically added
+            assert result == Path("/custom/myaudio.mp3")
+            assert str(result).endswith(".mp3")
+    
+    def test_custom_audio_with_different_extension_raises_error(self) -> None:
+        """Should raise error for custom audio path with non-.mp3 extension."""
+        # Given: custom audio path with .wav extension
+        with patch('main.OpenAI'):
+            transcriber = VideoTranscriber("key")
+            video_path = Path("/path/to/video.mp4")
+            audio_path = Path("/custom/audio.wav")  # Non-.mp3 extension
+            
+            # When: resolve_audio_path is called with non-.mp3 extension
+            # Then: ValueError is raised
+            with pytest.raises(ValueError) as exc_info:
+                transcriber.resolve_audio_path(video_path, audio_path)
+            assert "Audio file must have .mp3 extension" in str(exc_info.value)
+    
+    def test_custom_audio_with_mp3_extension_accepted(self) -> None:
+        """Should accept custom audio path with .mp3 extension."""
+        # Given: custom audio path with .mp3 extension
+        with patch('main.OpenAI'):
+            transcriber = VideoTranscriber("key")
+            video_path = Path("/path/to/video.mp4")
+            audio_path = Path("/custom/audio.mp3")  # .mp3 extension
+            
+            # When: resolve_audio_path is called with .mp3 extension
+            result = transcriber.resolve_audio_path(video_path, audio_path)
+            
+            # Then: path is returned as-is
+            assert result == audio_path
+            assert str(result).endswith(".mp3")
+
+
+class TestTranscriptFileExtensionHandling:
+    """Test automatic .txt extension handling for transcript files."""
+    
+    def test_save_transcript_without_txt_extension(self) -> None:
+        """Should automatically add .txt to transcript path."""
+        # Given: transcript output path without .txt extension
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "mytranscript"  # No .txt
+            transcript = "Test transcript content"
+            
+            with patch('builtins.print'):
+                # When: save_transcript is called without .txt extension
+                save_transcript(output_path, transcript)
+            
+            # Then: file is saved with .txt extension automatically added
+            assert Path(tmpdir, "mytranscript.txt").exists()
+            assert Path(tmpdir, "mytranscript.txt").read_text() == transcript
+    
+    def test_save_transcript_with_different_extension(self) -> None:
+        """Should replace custom extension with .txt."""
+        # Given: transcript output path with .text extension
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "mytranscript.text"  # Custom extension
+            transcript = "Test transcript content"
+            
+            with patch('builtins.print'):
+                # When: save_transcript is called with custom extension
+                save_transcript(output_path, transcript)
+            
+            # Then: extension is replaced with .txt
+            assert Path(tmpdir, "mytranscript.txt").exists()
+            assert Path(tmpdir, "mytranscript.txt").read_text() == transcript
+            # Original .text file should not exist
+            assert not output_path.exists()
+    
+    def test_save_transcript_no_extension(self) -> None:
+        """Should add .txt to paths with no extension."""
+        # Given: transcript output path with no extension
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output_file"  # No extension
+            transcript = "Transcript without extension"
+            
+            with patch('builtins.print'):
+                # When: save_transcript is called
+                save_transcript(output_path, transcript)
+            
+            # Then: file is saved with .txt extension added
+            assert Path(tmpdir, "output_file.txt").exists()
+            assert Path(tmpdir, "output_file.txt").read_text() == transcript
 
 
 class TestExtractAudio:
