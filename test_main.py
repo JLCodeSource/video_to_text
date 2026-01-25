@@ -342,7 +342,10 @@ class TestCalculateChunkParams:
             
             # Then: formula (25/30) * 600 * 0.9 = 450 seconds per chunk is applied
             expected_chunk_duration = (25.0 / 30.0) * 600.0 * 0.9
-            assert abs(chunk_duration - expected_chunk_duration) < 0.01
+            # Implementation prefers floor-minute rounding: floor(expected/60) * 60 (min 60)
+            minutes_floor = max(1, int(expected_chunk_duration // 60))
+            expected_floor = minutes_floor * 60
+            assert chunk_duration == expected_floor
 
 
 class TestExtractAudioChunk:
@@ -397,7 +400,7 @@ class TestTranscribeAudioFile:
                 mock_client.audio.transcriptions.create.assert_called_once()
                 call_kwargs = mock_client.audio.transcriptions.create.call_args[1]
                 assert call_kwargs["model"] == "whisper-1"
-                assert call_kwargs["response_format"] == "text"
+                assert call_kwargs["response_format"] == "verbose_json"
 
 
 class TestTranscribeChunkedAudio:
@@ -441,6 +444,102 @@ class TestTranscribeChunkedAudio:
                     # Then: chunks are transcribed and results joined with space
                     assert result == "chunk1 text chunk2 text"
                     assert mock_client.audio.transcriptions.create.call_count == 2
+
+
+class TestChunkTimestampOffsetsMinute:
+    """Verify chunked transcriptions have minute-based offsets when chunks are 60s."""
+
+    def test_minute_chunk_offsets(self) -> None:
+        """Two 60s chunks should produce second chunk timestamps offset by 01:00."""
+        with patch('main.OpenAI') as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+
+            # Each chunk's transcription returns segments starting at 0s
+            mock_client.audio.transcriptions.create.side_effect = [
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "First minute"}]},
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "Second minute"}]},
+            ]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                audio_path = Path(tmpdir) / "audio.mp3"
+                audio_path.write_text("dummy audio")
+
+                transcriber = VideoTranscriber("key")
+
+                # Fake extract_audio_chunk to create chunk files
+                def fake_extract(audio_path_arg, start, end, idx):
+                    p = Path(tmpdir) / f"chunk{idx}.mp3"
+                    p.write_text("chunk")
+                    return p
+
+                with patch.object(VideoTranscriber, 'extract_audio_chunk', side_effect=fake_extract):
+                    # When: transcribing 2 chunks of 60s each
+                    result = transcriber.transcribe_chunked_audio(
+                        audio_path,
+                        duration=120.0,
+                        num_chunks=2,
+                        chunk_duration=60.0,
+                        keep_chunks=True,
+                    )
+
+                    # Then: first chunk lines start at 00:00, second chunk lines offset by 01:00
+                    assert "[00:00 - 00:01] First minute" in result
+                    assert "[01:00 - 01:01] Second minute" in result
+
+
+class TestChunkTimestampOffsetsVariable:
+    """Verify offsets when chunks are very short (variable lengths)."""
+
+    def test_variable_short_first_chunk_offsets(self) -> None:
+        """If first chunk is 1s long, second chunk timestamps should start at 00:01."""
+        with patch('main.OpenAI') as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+
+            mock_client.audio.transcriptions.create.side_effect = [
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "Short first"}]},
+                {"segments": [{"start": 0.0, "end": 2.0, "text": "Then second"}]},
+            ]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                audio_path = Path(tmpdir) / "audio.mp3"
+                audio_path.write_text("dummy audio")
+
+                transcriber = VideoTranscriber("key")
+
+                def fake_extract(audio_path_arg, start, end, idx):
+                    p = Path(tmpdir) / f"chunk{idx}.mp3"
+                    p.write_text("chunk")
+                    return p
+
+                with patch.object(VideoTranscriber, 'extract_audio_chunk', side_effect=fake_extract):
+                    # When: use chunk_duration=1s so second chunk starts at 1s
+                    result = transcriber.transcribe_chunked_audio(
+                        audio_path,
+                        duration=120.0,
+                        num_chunks=2,
+                        chunk_duration=1.0,
+                        keep_chunks=True,
+                    )
+
+                    # Then: second chunk timestamps are offset by 00:01
+                    assert "[00:00 - 00:01] Short first" in result
+                    assert "[00:01 - 00:03] Then second" in result
+
+
+class TestCalculateChunkParamsRounding:
+    """Ensure chunk calculation prefers round-minute chunk durations."""
+
+    def test_calculate_chunk_params_rounds_to_minute(self) -> None:
+        """Chunk duration should be rounded to a whole minute when reasonable."""
+        with patch('main.OpenAI'):
+            transcriber = VideoTranscriber("key")
+            # Large file: expect chunk_duration to be rounded to nearest 60s
+            num_chunks, chunk_duration = transcriber.calculate_chunk_params(100.0, 3600.0)
+            # chunk_duration should be a multiple of 60
+            assert int(chunk_duration) % 60 == 0
+            assert num_chunks >= 1
 
 
 class TestTranscribeSmallFile:
@@ -859,6 +958,59 @@ class TestMainGuard:
             # Then: verify expected behavior
             assert hasattr(module, '__name__')
 
+
+class TestTranscribeVerboseJson:
+    """Tests for verbose_json transcription format (timestamps)."""
+
+    def test_transcribe_audio_file_uses_verbose_json(self) -> None:
+        """Should call Whisper API with response_format='verbose_json'."""
+        with patch('main.OpenAI') as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.return_value = {
+                "segments": [
+                    {"start": 0.0, "end": 1.0, "text": "Hello"}
+                ]
+            }
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                audio_path = Path(tmpdir) / "audio.mp3"
+                audio_path.write_text("dummy audio")
+
+                transcriber = VideoTranscriber("key")
+                # When: transcribe_audio_file is called
+                _ = transcriber.transcribe_audio_file(audio_path)
+
+                # Then: API called with verbose_json (test-first expectation)
+                mock_client.audio.transcriptions.create.assert_called_once()
+                call_kwargs = mock_client.audio.transcriptions.create.call_args[1]
+                assert call_kwargs.get("response_format") == "verbose_json"
+
+    def test_transcribe_audio_file_formats_verbose_json(self) -> None:
+        """Should format verbose_json response into timestamped lines."""
+        with patch('main.OpenAI') as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.return_value = {
+                "segments": [
+                    {"start": 0.0, "end": 1.2, "text": "Hello world"},
+                    {"start": 2.5, "end": 4.7, "text": "Second line"},
+                ]
+            }
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                audio_path = Path(tmpdir) / "audio.mp3"
+                audio_path.write_text("dummy audio")
+
+                transcriber = VideoTranscriber("key")
+                # When: transcribe_audio_file is called
+                result = transcriber.transcribe_audio_file(audio_path)
+
+                # Then: result should contain timestamped lines (expected format)
+                expected_first = "[00:00 - 00:01] Hello world"
+                expected_second = "[00:02 - 00:04] Second line"
+                assert expected_first in result
+                assert expected_second in result
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--cov=main", "--cov-report=term-missing", "--cov-report=html"])

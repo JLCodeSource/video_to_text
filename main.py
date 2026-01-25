@@ -6,6 +6,8 @@ from pathlib import Path
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from openai import OpenAI
+from openai.types.audio.transcription_verbose import TranscriptionVerbose
+import re
 
 
 class VideoTranscriber:
@@ -96,9 +98,16 @@ class VideoTranscriber:
             return 1, duration
         
         # Calculate chunk duration: (MAX_SIZE_MB / file_size_mb) * duration * 0.9 (safety margin)
-        chunk_duration: float = (self.MAX_SIZE_MB / file_size_mb) * duration * 0.9
+        # Base chunk duration calculation with safety margin
+        raw_chunk_duration: float = (self.MAX_SIZE_MB / file_size_mb) * duration * 0.9
+
+        # Prefer round-minute chunk sizes for nicer timestamps: round to nearest 60s
+        # Use floor division to prefer smaller (floor) minute chunks
+        minutes = max(1, int(raw_chunk_duration // 60))
+        chunk_duration: float = float(minutes * 60)
+
         num_chunks: int = math.ceil(duration / chunk_duration)
-        
+
         return num_chunks, chunk_duration
     
     def extract_audio_chunk(self, audio_path: Path, start_time: float, end_time: float, chunk_index: int) -> Path:
@@ -111,14 +120,96 @@ class VideoTranscriber:
         return chunk_path
     
     def transcribe_audio_file(self, audio_path: Path) -> str:
-        """Transcribe a single audio file using Whisper API."""
+        """Transcribe a single audio file using Whisper API with timestamps."""
         with open(audio_path, "rb") as audio_file:
-            transcript = self.client.audio.transcriptions.create(
-                model="whisper-1", 
+            response: TranscriptionVerbose = self.client.audio.transcriptions.create(
+                model="whisper-1",
                 file=audio_file,
-                response_format="text"
+                response_format="verbose_json",
             )
-        return transcript
+
+        formatted = self._format_transcript_with_timestamps(response)
+
+        # Diagnostic: if we got an empty transcript, print response details
+        if not formatted or not formatted.strip():
+            try:
+                print("DEBUG: Empty formatted transcript produced")
+                print(f"DEBUG: response type: {type(response)!r}")
+                # If it's a dict-like response, show top-level keys
+                if isinstance(response, dict):
+                    print(f"DEBUG: response keys: {list(response.keys())}")
+                    # If there is raw text, print a preview
+                    if "text" in response:
+                        preview = (response.get("text") or "")[:200]
+                        print(f"DEBUG: response[text] preview: {preview!r}")
+                else:
+                    preview = str(response)[:400]
+                    print(f"DEBUG: response preview: {preview!r}")
+            except Exception as e:
+                print(f"DEBUG: error while printing response: {e}")
+
+        return formatted
+
+    def _format_transcript_with_timestamps(self, response: TranscriptionVerbose) -> str:
+        """Format verbose JSON response with timestamps."""
+        # If the response is already a plain string, return it
+        if isinstance(response, str):
+            return response
+
+        formatted_lines: list[str] = []
+
+        # Handle dict-like responses (tests / older client behavior)
+        if isinstance(response, dict):
+            segments = response.get("segments", [])
+            for segment in segments:
+                start_time = self._format_timestamp(segment.get("start", 0))
+                end_time = self._format_timestamp(segment.get("end", 0))
+                text = segment.get("text", "").strip()
+                if text:
+                    formatted_lines.append(f"[{start_time} - {end_time}] {text}")
+
+            if formatted_lines:
+                return "\n".join(formatted_lines)
+
+            if "text" in response:
+                return response.get("text", "")
+
+        # Handle SDK objects like TranscriptionVerbose which expose attributes
+        # (e.g. from openai-python client typed models)
+        if not isinstance(response, dict):
+            # If response has segments attribute, iterate them
+            segments_attr = getattr(response, "segments", None)
+            if segments_attr:
+                for segment in segments_attr:
+                    start = getattr(segment, "start", None)
+                    end = getattr(segment, "end", None)
+                    text = getattr(segment, "text", "") or ""
+                    start_time = self._format_timestamp(start or 0)
+                    end_time = self._format_timestamp(end or 0)
+                    text = str(text).strip()
+                    if text:
+                        formatted_lines.append(f"[{start_time} - {end_time}] {text}")
+
+                if formatted_lines:
+                    return "\n".join(formatted_lines)
+
+            # Fallback to .text attribute if present
+            text_attr = getattr(response, "text", None)
+            if text_attr:
+                return str(text_attr)
+
+        return ""
+
+    def _format_timestamp(self, seconds: float) -> str:
+        """Convert seconds to MM:SS format (floor seconds)."""
+        try:
+            total_seconds = int(seconds)
+        except Exception:
+            total_seconds = 0
+
+        minutes = total_seconds // 60
+        secs = total_seconds % 60
+        return f"{minutes:02d}:{secs:02d}"
     
     def transcribe_chunked_audio(self, audio_path: Path, duration: float, num_chunks: int, chunk_duration: float, keep_chunks: bool = False) -> str:
         """Transcribe audio by splitting into chunks."""
@@ -135,6 +226,9 @@ class VideoTranscriber:
             chunk_files.append(chunk_path)
             print(f"Transcribing chunk {i+1}/{num_chunks}...")
             transcript: str = self.transcribe_audio_file(chunk_path)
+            # Shift timestamps in transcript by chunk start_time so they are absolute
+            if transcript and start_time > 0:
+                transcript = self._shift_formatted_timestamps(transcript, start_time)
             transcripts.append(transcript)
             
             # Clean up chunk file unless keeping chunks
@@ -145,6 +239,18 @@ class VideoTranscriber:
             print(f"Kept {len(chunk_files)} chunk files for reference")
         
         return " ".join(transcripts)
+
+    def _shift_formatted_timestamps(self, formatted: str, offset_seconds: float) -> str:
+        """Shift MM:SS timestamps in formatted transcript by offset_seconds."""
+        def repl(match: re.Match) -> str:
+            m1_min, m1_sec, m2_min, m2_sec = match.groups()
+            start_secs = int(m1_min) * 60 + int(m1_sec)
+            end_secs = int(m2_min) * 60 + int(m2_sec)
+            new_start = self._format_timestamp(start_secs + int(offset_seconds))
+            new_end = self._format_timestamp(end_secs + int(offset_seconds))
+            return f"[{new_start} - {new_end}]"
+
+        return re.sub(r"\[(\d{2}):(\d{2}) - (\d{2}):(\d{2})\]", repl, formatted)
     
     def transcribe(self, video_path: Path, audio_path: Path | None = None, force: bool = False, keep_audio: bool = True) -> str:
         """
