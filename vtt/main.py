@@ -296,15 +296,17 @@ class VideoTranscriber:
         *,
         force: bool = False,
         keep_audio: bool = True,
+        scan_chunks: bool = False,
     ) -> str:
         """
         Transcribe video audio using OpenAI's Whisper model.
 
         Args:
-            video_path: Path to the video file
+            video_path: Path to the video file or audio file
             audio_path: Optional path for extracted audio file. If not provided, creates one based on video name
             force: If True, re-extract audio even if it exists
             keep_audio: If True, keep audio files after transcription. If False, delete them.
+            scan_chunks: If True and input is a chunk file, find and process all sibling chunks in order
 
         Returns:
             Transcribed text from the video audio
@@ -315,6 +317,22 @@ class VideoTranscriber:
         if is_audio_input:
             # Direct audio input: use it directly, no extraction needed
             audio_path = video_path
+
+            # Check if this is a chunk file and scan_chunks is enabled
+            if scan_chunks and "_chunk" in audio_path.stem:
+                # Extract base name (remove _chunkN suffix)
+                base_stem = audio_path.stem.split("_chunk")[0]
+                base_audio_path = audio_path.with_stem(base_stem)
+                # Find all sibling chunks
+                all_chunks = self.find_existing_chunks(base_audio_path)
+                if all_chunks:
+                    print(f"Found {len(all_chunks)} chunk files, processing in order...")
+                    transcripts = []
+                    for chunk_path in all_chunks:
+                        print(f"Transcribing {chunk_path.name}...")
+                        transcript = self.transcribe_audio_file(chunk_path)
+                        transcripts.append(transcript)
+                    return " ".join(transcripts)
         else:
             # Validate inputs
             video_path = self.validate_video_file(video_path)

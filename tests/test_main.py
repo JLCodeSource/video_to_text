@@ -428,6 +428,62 @@ class TestDirectAudioTranscription:
                     mock_extract.assert_not_called()
                     assert result == "Test transcript"
 
+    def test_transcribe_single_chunk_file_directly(self) -> None:
+        """Should transcribe a single chunk file without scanning for siblings."""
+        # Given a single chunk file exists
+        with patch("vtt.main.OpenAI") as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "Chunk transcript")  # type: ignore[arg-type]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                chunk_file = Path(tmpdir) / "audio_chunk0.mp3"
+                chunk_file.write_text("x" * 1024)
+
+                with patch.object(VideoTranscriber, "extract_audio") as mock_extract, patch("builtins.print"):
+                    transcriber = VideoTranscriber("key")
+
+                    # When transcribe is called with a chunk file
+                    result = transcriber.transcribe(chunk_file, audio_path=None)
+
+                    # Then only that chunk is transcribed, not siblings
+                    mock_extract.assert_not_called()
+                    assert result == "Chunk transcript"
+                    # Verify transcribe_audio_file was called once (not chunked processing)
+                    mock_client.audio.transcriptions.create.assert_called_once()
+
+    def test_scan_chunks_flag_processes_all_sibling_chunks(self) -> None:
+        """Should detect and transcribe all sibling chunks when scan_chunks=True."""
+        # Given multiple chunk files exist (chunk0, chunk1, chunk2)
+        with patch("vtt.main.OpenAI") as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.side_effect = [
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "First chunk"}]},
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "Second chunk"}]},
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "Third chunk"}]},
+            ]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
+                chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
+                chunk2 = Path(tmpdir) / "audio_chunk2.mp3"
+                chunk0.write_text("x" * 1024)
+                chunk1.write_text("x" * 1024)
+                chunk2.write_text("x" * 1024)
+
+                with patch("builtins.print"):
+                    transcriber = VideoTranscriber("key")
+
+                    # When transcribe is called with scan_chunks=True
+                    result = transcriber.transcribe(chunk0, audio_path=None, scan_chunks=True)  # type: ignore[call-arg]
+
+                    # Then all 3 chunks are transcribed in order
+                    assert mock_client.audio.transcriptions.create.call_count == 3
+                    assert "First chunk" in result
+                    assert "Second chunk" in result
+                    assert "Third chunk" in result
+
 
 class TestTranscribeChunkedAudio:
     """Test chunked audio transcription."""
