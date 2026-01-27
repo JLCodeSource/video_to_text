@@ -1,5 +1,7 @@
 # Custom
 *.mp3
+*.ogg
+*.wav
 *.mp4
 *.txt
 

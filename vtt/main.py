@@ -16,6 +16,7 @@ class VideoTranscriber:
     """Transcribe video audio using OpenAI's Whisper model."""
 
     MAX_SIZE_MB = 25
+    SUPPORTED_AUDIO_FORMATS = (".mp3", ".wav", ".ogg")
 
     def __init__(self, api_key: str) -> None:
         """Initialize transcriber with API key."""
@@ -289,6 +290,28 @@ class VideoTranscriber:
 
         return re.sub(r"\[(\d{2}):(\d{2}) - (\d{2}):(\d{2})\]", repl, formatted)
 
+    def _transcribe_sibling_chunks(self, base_audio_path: Path) -> str:
+        """Transcribe all sibling chunks with timestamp shifting."""
+        all_chunks = self.find_existing_chunks(base_audio_path)
+        if not all_chunks:
+            return ""
+
+        print(f"Found {len(all_chunks)} chunk files, processing in order...")
+        transcripts = []
+        cumulative_start = 0.0
+        for chunk_path in all_chunks:
+            print(f"Transcribing {chunk_path.name}...")
+            transcript = self.transcribe_audio_file(chunk_path)
+            # Shift timestamps by cumulative offset for chunks after the first
+            if transcript and cumulative_start > 0:
+                transcript = self._shift_formatted_timestamps(transcript, cumulative_start)
+            transcripts.append(transcript)
+            # Update cumulative start by the duration of this chunk
+            with contextlib.suppress(Exception):
+                cumulative_start += self.get_audio_duration(chunk_path)
+        # Separate chunk transcripts with blank lines for readability
+        return "\n\n".join(transcripts)
+
     def transcribe(
         self,
         video_path: Path,
@@ -296,25 +319,54 @@ class VideoTranscriber:
         *,
         force: bool = False,
         keep_audio: bool = True,
+        scan_chunks: bool = False,
     ) -> str:
         """
         Transcribe video audio using OpenAI's Whisper model.
 
         Args:
-            video_path: Path to the video file
+            video_path: Path to the video file or audio file
             audio_path: Optional path for extracted audio file. If not provided, creates one based on video name
             force: If True, re-extract audio even if it exists
             keep_audio: If True, keep audio files after transcription. If False, delete them.
+            scan_chunks: If True and input is a chunk file, find and process all sibling chunks in order
 
         Returns:
             Transcribed text from the video audio
         """
-        # Validate inputs
-        video_path = self.validate_video_file(video_path)
-        audio_path = self.resolve_audio_path(video_path, audio_path)
+        # Check if input is already an audio file
+        is_audio_input = video_path.suffix.lower() in self.SUPPORTED_AUDIO_FORMATS
 
-        # Extract audio
-        self.extract_audio(video_path, audio_path, force=force)
+        if is_audio_input:
+            # Validate audio file exists
+            if not video_path.exists():
+                msg = f"Audio file not found: {video_path}"
+                raise FileNotFoundError(msg)
+
+            # Reject -o flag with audio input
+            if audio_path is not None:
+                msg = "Cannot specify -o/--output-audio when input is already an audio file"
+                raise ValueError(msg)
+
+            # Direct audio input: use it directly, no extraction needed
+            audio_path = video_path
+
+            # Check if this is a chunk file and scan_chunks is enabled
+            if scan_chunks and "_chunk" in audio_path.stem:
+                # Extract base name (remove _chunkN suffix)
+                base_stem = audio_path.stem.split("_chunk")[0]
+                base_audio_path = audio_path.with_stem(base_stem)
+                # Find and transcribe all sibling chunks
+                result = self._transcribe_sibling_chunks(base_audio_path)
+                if result:
+                    return result
+        else:
+            # Validate inputs
+            video_path = self.validate_video_file(video_path)
+            audio_path = self.resolve_audio_path(video_path, audio_path)
+
+            # Extract audio
+            self.extract_audio(video_path, audio_path, force=force)
 
         # Get file size
         file_size_mb = audio_path.stat().st_size / (1024 * 1024)
@@ -370,11 +422,11 @@ def display_result(transcript: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Transcribe video audio using OpenAI's Whisper model",
+        description="Transcribe video or audio files using OpenAI's Whisper model",
     )
     parser.add_argument(
         "video_file",
-        help="Path to the video file to transcribe",
+        help="Path to the video or audio file to transcribe (.mp4, .mp3, .wav, .ogg)",
     )
     parser.add_argument(
         "-k",
@@ -402,6 +454,11 @@ def main() -> None:
         action="store_true",
         help="Delete audio files after transcription (default: keep audio files)",
     )
+    parser.add_argument(
+        "--scan-chunks",
+        action="store_true",
+        help="When input is a chunk file, detect and process all sibling chunks in order",
+    )
 
     args = parser.parse_args()
 
@@ -412,7 +469,9 @@ def main() -> None:
         video_path = Path(args.video_file)
         audio_path = Path(args.output_audio) if args.output_audio else None
         keep_audio = not args.delete_audio
-        result = transcriber.transcribe(video_path, audio_path, force=args.force, keep_audio=keep_audio)
+        result = transcriber.transcribe(
+            video_path, audio_path, force=args.force, keep_audio=keep_audio, scan_chunks=args.scan_chunks
+        )
         display_result(result)
 
         if args.save_transcript:

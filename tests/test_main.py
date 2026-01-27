@@ -403,6 +403,145 @@ class TestTranscribeAudioFile:
                 assert call_kwargs["response_format"] == "verbose_json"
 
 
+class TestDirectAudioTranscription:
+    """When a user provides an audio file as the primary input."""
+
+    def test_transcribe_direct_mp3_skips_extraction(self) -> None:
+        """Should skip audio extraction when input is already an .mp3 file."""
+        # Given an existing .mp3 file and a mocked OpenAI client
+        with patch("vtt.main.OpenAI") as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "Test transcript")  # type: ignore[arg-type]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                input_audio = Path(tmpdir) / "input_audio.mp3"
+                input_audio.write_text("x" * 1024)  # 1KB audio file
+
+                with patch.object(VideoTranscriber, "extract_audio") as mock_extract, patch("builtins.print"):
+                    transcriber = VideoTranscriber("key")
+
+                    # When transcribe is called with the audio file as the main input
+                    result = transcriber.transcribe(input_audio, audio_path=None)
+
+                    # Then extract_audio should not be called and transcript returned
+                    mock_extract.assert_not_called()
+                    assert result == "Test transcript"
+
+    def test_transcribe_single_chunk_file_directly(self) -> None:
+        """Should transcribe a single chunk file without scanning for siblings."""
+        # Given a single chunk file exists
+        with patch("vtt.main.OpenAI") as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "Chunk transcript")  # type: ignore[arg-type]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                chunk_file = Path(tmpdir) / "audio_chunk0.mp3"
+                chunk_file.write_text("x" * 1024)
+
+                with patch.object(VideoTranscriber, "extract_audio") as mock_extract, patch("builtins.print"):
+                    transcriber = VideoTranscriber("key")
+
+                    # When transcribe is called with a chunk file
+                    result = transcriber.transcribe(chunk_file, audio_path=None)
+
+                    # Then only that chunk is transcribed, not siblings
+                    mock_extract.assert_not_called()
+                    assert result == "Chunk transcript"
+                    # Verify transcribe_audio_file was called once (not chunked processing)
+                    mock_client.audio.transcriptions.create.assert_called_once()
+
+    def test_transcribe_nonexistent_audio_file_raises_error(self) -> None:
+        """Should raise FileNotFoundError when audio file doesn't exist."""
+        # Given a non-existent audio file path
+        with patch("vtt.main.OpenAI"):
+            transcriber = VideoTranscriber("key")
+            nonexistent_audio = Path("/nonexistent/audio.mp3")
+
+            # When transcribe is called with non-existent audio file
+            with pytest.raises(FileNotFoundError) as exc_info:
+                transcriber.transcribe(nonexistent_audio, audio_path=None)
+
+            # Then FileNotFoundError is raised with clear message
+            assert "Audio file not found" in str(exc_info.value)
+
+    def test_transcribe_audio_with_output_audio_flag_raises_error(self) -> None:
+        """Should raise ValueError when -o flag is provided with audio input."""
+        # Given an existing audio file and a custom output audio path
+        with patch("vtt.main.OpenAI"):
+            transcriber = VideoTranscriber("key")
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                input_audio = Path(tmpdir) / "input.mp3"
+                input_audio.write_text("x" * 1024)
+                custom_output = Path(tmpdir) / "custom_output.mp3"
+
+                # When transcribe is called with audio input AND audio_path specified
+                with pytest.raises(ValueError, match=r"Cannot specify.*output-audio.*audio file"):
+                    transcriber.transcribe(input_audio, audio_path=custom_output)
+
+    def test_scan_chunks_flag_processes_all_sibling_chunks(self) -> None:
+        """Should detect and transcribe all sibling chunks when scan_chunks=True."""
+        # Given multiple chunk files exist (chunk0, chunk1, chunk2)
+        with patch("vtt.main.OpenAI") as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.side_effect = [
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "First chunk"}]},
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "Second chunk"}]},
+                {"segments": [{"start": 0.0, "end": 1.0, "text": "Third chunk"}]},
+            ]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
+                chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
+                chunk2 = Path(tmpdir) / "audio_chunk2.mp3"
+                chunk0.write_text("x" * 1024)
+                chunk1.write_text("x" * 1024)
+                chunk2.write_text("x" * 1024)
+
+                with patch("builtins.print"):
+                    transcriber = VideoTranscriber("key")
+
+                    # When transcribe is called with scan_chunks=True
+                    result = transcriber.transcribe(chunk0, audio_path=None, scan_chunks=True)  # type: ignore[call-arg]
+
+                    # Then all 3 chunks are transcribed in order
+                    assert mock_client.audio.transcriptions.create.call_count == 3
+                    assert "First chunk" in result
+                    assert "Second chunk" in result
+                    assert "Third chunk" in result
+
+    def test_scan_chunks_shifts_timestamps_and_separates_with_newlines(self) -> None:
+        """Should shift timestamps for each chunk and separate with blank lines."""
+        # Given multiple chunk files with formatted timestamps
+        with patch("vtt.main.OpenAI") as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.side_effect = [
+                {"segments": [{"start": 0.0, "end": 2.0, "text": "First"}]},
+                {"segments": [{"start": 0.0, "end": 2.0, "text": "Second"}]},
+            ]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
+                chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
+                chunk0.write_text("x" * 1024)
+                chunk1.write_text("x" * 1024)
+
+                with patch("builtins.print"), patch.object(VideoTranscriber, "get_audio_duration", return_value=10.0):
+                    transcriber = VideoTranscriber("key")
+
+                    # When transcribe is called with scan_chunks=True
+                    result = transcriber.transcribe(chunk0, audio_path=None, scan_chunks=True)  # type: ignore[call-arg]
+
+                    # Then timestamps are shifted and chunks separated with blank lines
+                    assert "[00:00 - 00:02]" in result  # First chunk at 0s
+                    assert "[00:10 - 00:12]" in result  # Second chunk offset by 10s
+                    assert "\n\n" in result  # Blank line separator between chunks
+
+
 class TestTranscribeChunkedAudio:
     """Test chunked audio transcription."""
 
@@ -767,6 +906,29 @@ class TestMainCliArgumentParsing:
 
                     # Run main.py as a __main__ module; should not raise
                     runpy.run_path(str(Path(__file__).parent / "main.py"), run_name="__main__")
+
+    def test_main_with_scan_chunks_flag(self) -> None:
+        """Should pass scan_chunks=True to transcriber when --scan-chunks flag provided."""
+        # Given audio chunk file and --scan-chunks flag
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}), tempfile.TemporaryDirectory() as tmpdir:
+            chunk_file = Path(tmpdir) / "audio_chunk0.mp3"
+            chunk_file.write_text("x" * 1024)
+
+            with (
+                patch("sys.argv", ["main.py", str(chunk_file), "--scan-chunks"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="test") as mock_transcribe,
+                patch("builtins.print"),
+            ):
+                # When main() is called with --scan-chunks flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then transcribe is called with scan_chunks=True
+                mock_transcribe.assert_called_once()
+                call_kwargs = mock_transcribe.call_args.kwargs
+                assert call_kwargs.get("scan_chunks") is True
 
 
 class TestMainErrorHandling:
