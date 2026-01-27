@@ -427,6 +427,11 @@ def main() -> None:
         action="store_true",
         help="Delete audio files after transcription (default: keep audio files)",
     )
+    parser.add_argument(
+        "--scan-chunks",
+        action="store_true",
+        help="When input is a chunk file, detect and process all sibling chunks in order",
+    )
 
     args = parser.parse_args()
 
@@ -437,7 +442,9 @@ def main() -> None:
         video_path = Path(args.video_file)
         audio_path = Path(args.output_audio) if args.output_audio else None
         keep_audio = not args.delete_audio
-        result = transcriber.transcribe(video_path, audio_path, force=args.force, keep_audio=keep_audio)
+        result = transcriber.transcribe(
+            video_path, audio_path, force=args.force, keep_audio=keep_audio, scan_chunks=args.scan_chunks
+        )
         display_result(result)
 
         if args.save_transcript:

@@ -850,6 +850,29 @@ class TestMainCliArgumentParsing:
                     # Run main.py as a __main__ module; should not raise
                     runpy.run_path(str(Path(__file__).parent / "main.py"), run_name="__main__")
 
+    def test_main_with_scan_chunks_flag(self) -> None:
+        """Should pass scan_chunks=True to transcriber when --scan-chunks flag provided."""
+        # Given audio chunk file and --scan-chunks flag
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}), tempfile.TemporaryDirectory() as tmpdir:
+            chunk_file = Path(tmpdir) / "audio_chunk0.mp3"
+            chunk_file.write_text("x" * 1024)
+
+            with (
+                patch("sys.argv", ["main.py", str(chunk_file), "--scan-chunks"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="test") as mock_transcribe,
+                patch("builtins.print"),
+            ):
+                # When main() is called with --scan-chunks flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then transcribe is called with scan_chunks=True
+                mock_transcribe.assert_called_once()
+                call_kwargs = mock_transcribe.call_args.kwargs
+                assert call_kwargs.get("scan_chunks") is True
+
 
 class TestMainErrorHandling:
     """Test main function error handling."""
