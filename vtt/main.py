@@ -315,6 +315,11 @@ class VideoTranscriber:
         is_audio_input = video_path.suffix.lower() in [".mp3", ".wav", ".ogg"]
 
         if is_audio_input:
+            # Validate audio file exists
+            if not video_path.exists():
+                msg = f"Audio file not found: {video_path}"
+                raise FileNotFoundError(msg)
+
             # Direct audio input: use it directly, no extraction needed
             audio_path = video_path
 

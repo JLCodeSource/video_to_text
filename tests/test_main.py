@@ -452,6 +452,20 @@ class TestDirectAudioTranscription:
                     # Verify transcribe_audio_file was called once (not chunked processing)
                     mock_client.audio.transcriptions.create.assert_called_once()
 
+    def test_transcribe_nonexistent_audio_file_raises_error(self) -> None:
+        """Should raise FileNotFoundError when audio file doesn't exist."""
+        # Given a non-existent audio file path
+        with patch("vtt.main.OpenAI"):
+            transcriber = VideoTranscriber("key")
+            nonexistent_audio = Path("/nonexistent/audio.mp3")
+
+            # When transcribe is called with non-existent audio file
+            with pytest.raises(FileNotFoundError) as exc_info:
+                transcriber.transcribe(nonexistent_audio, audio_path=None)
+
+            # Then FileNotFoundError is raised with clear message
+            assert "Audio file not found" in str(exc_info.value)
+
     def test_scan_chunks_flag_processes_all_sibling_chunks(self) -> None:
         """Should detect and transcribe all sibling chunks when scan_chunks=True."""
         # Given multiple chunk files exist (chunk0, chunk1, chunk2)
