@@ -13,7 +13,7 @@ import pytest
 if TYPE_CHECKING:
     from openai.types.audio.transcription_verbose import TranscriptionVerbose
 
-from main import (
+from vtt.main import (
     VideoTranscriber,
     display_result,
     get_api_key,
@@ -28,7 +28,7 @@ class TestVideoTranscriberInit:
     def test_init_with_valid_api_key(self) -> None:
         """Should initialize with API key."""
         # Given OpenAI client is mocked
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             # When VideoTranscriber is initialized with API key
             transcriber = VideoTranscriber("test-api-key")
             # Then API key is stored and OpenAI client is created
@@ -38,7 +38,7 @@ class TestVideoTranscriberInit:
     def test_init_sets_max_size_mb(self) -> None:
         """Should have MAX_SIZE_MB constant."""
         # Given OpenAI client is mocked
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             # When VideoTranscriber is initialized
             transcriber = VideoTranscriber("test-key")
             # Then MAX_SIZE_MB constant is 25
@@ -55,7 +55,7 @@ class TestValidateVideoFile:
             video_path = Path(tmpdir) / "test.mp4"
             video_path.touch()
 
-            with patch("main.OpenAI"):
+            with patch("vtt.main.OpenAI"):
                 transcriber = VideoTranscriber("key")
                 # When validate_video_file is called with existing file
                 result = transcriber.validate_video_file(video_path)
@@ -65,7 +65,7 @@ class TestValidateVideoFile:
     def test_validate_nonexistent_video_file(self) -> None:
         """Should raise FileNotFoundError for missing file."""
         # Given OpenAI client is mocked
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             nonexistent = Path("/nonexistent/video.mp4")
 
@@ -82,7 +82,7 @@ class TestResolveAudioPath:
     def test_resolve_audio_path_none_returns_mp3_suffix(self) -> None:
         """Should default to .mp3 suffix when audio_path is None."""
         # Given VideoTranscriber and video path
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             video_path = Path("/path/to/video.mp4")
             # When resolve_audio_path is called with None audio_path
@@ -93,7 +93,7 @@ class TestResolveAudioPath:
     def test_resolve_audio_path_custom(self) -> None:
         """Should accept custom audio_path with .mp3 extension."""
         # Given VideoTranscriber, video path, and custom audio path with .mp3
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             video_path = Path("/path/to/video.mp4")
             audio_path = Path("/custom/audio.mp3")
@@ -109,7 +109,7 @@ class TestAudioPathExtensionHandling:
     def test_custom_audio_without_extension_gets_mp3(self) -> None:
         """Should automatically add .mp3 to custom audio path without extension."""
         # Given custom audio path without any extension
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             video_path = Path("/path/to/video.mp4")
             audio_path = Path("/custom/myaudio")  # No extension
@@ -124,7 +124,7 @@ class TestAudioPathExtensionHandling:
     def test_custom_audio_with_different_extension_raises_error(self) -> None:
         """Should raise error for custom audio path with non-.mp3 extension."""
         # Given custom audio path with .wav extension
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             video_path = Path("/path/to/video.mp4")
             audio_path = Path("/custom/audio.wav")  # Non-.mp3 extension
@@ -137,7 +137,7 @@ class TestAudioPathExtensionHandling:
     def test_custom_audio_with_mp3_extension_accepted(self) -> None:
         """Should accept custom audio path with .mp3 extension."""
         # Given custom audio path with .mp3 extension
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             video_path = Path("/path/to/video.mp4")
             audio_path = Path("/custom/audio.mp3")  # .mp3 extension
@@ -212,7 +212,7 @@ class TestExtractAudio:
             video_path.touch()
             audio_path = Path(tmpdir) / "audio.mp3"
 
-            with patch("main.OpenAI"), patch("main.VideoFileClip") as mock_video:
+            with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
                 mock_video_instance = MagicMock()
                 mock_video_instance.audio = MagicMock()
                 mock_video.return_value = mock_video_instance
@@ -235,7 +235,7 @@ class TestExtractAudio:
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("dummy")
 
-            with patch("main.OpenAI"), patch("main.VideoFileClip") as mock_video:
+            with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
                 transcriber = VideoTranscriber("key")
                 with patch("builtins.print"):
                     # When extract_audio is called with existing file and force=False
@@ -253,7 +253,7 @@ class TestExtractAudio:
             audio_path = Path(tmpdir) / "audio.mp3"
             audio_path.write_text("dummy")
 
-            with patch("main.OpenAI"), patch("main.VideoFileClip") as mock_video:
+            with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
                 mock_video_instance = MagicMock()
                 mock_video_instance.audio = MagicMock()
                 mock_video.return_value = mock_video_instance
@@ -273,7 +273,7 @@ class TestExtractAudio:
             video_path.touch()
             audio_path = Path(tmpdir) / "audio.mp3"
 
-            with patch("main.OpenAI"), patch("main.VideoFileClip") as mock_video:
+            with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
                 mock_video_instance = MagicMock()
                 mock_video_instance.audio = None
                 mock_video.return_value = mock_video_instance
@@ -292,7 +292,7 @@ class TestGetAudioDuration:
     def test_get_audio_duration(self) -> None:
         """Should return audio duration in seconds."""
         # Given mocked AudioFileClip with 120.5 second duration
-        with patch("main.OpenAI"), patch("main.AudioFileClip") as mock_audio:
+        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio:
             mock_audio_instance = MagicMock()
             mock_audio_instance.duration = 120.5
             mock_audio.return_value = mock_audio_instance
@@ -313,7 +313,7 @@ class TestCalculateChunkParams:
     def test_calculate_chunk_params_small_file(self) -> None:
         """Should return 1 chunk for file under limit."""
         # Given VideoTranscriber and 10MB file with 5 minute duration
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When calculate_chunk_params is called with small file
             num_chunks, _ = transcriber.calculate_chunk_params(10.0, 300.0)
@@ -323,7 +323,7 @@ class TestCalculateChunkParams:
     def test_calculate_chunk_params_large_file(self) -> None:
         """Should calculate multiple chunks for large file."""
         # Given VideoTranscriber and 50MB file with 1 hour duration
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When calculate_chunk_params is called with large file
             num_chunks, chunk_duration = transcriber.calculate_chunk_params(50.0, 3600.0)
@@ -334,7 +334,7 @@ class TestCalculateChunkParams:
     def test_calculate_chunk_params_formula(self) -> None:
         """Should apply correct formula for chunk calculation."""
         # Given VideoTranscriber, 30MB file, and 10 minute duration
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             file_size_mb = 30.0
             duration = 600.0  # 10 minutes
@@ -355,7 +355,7 @@ class TestExtractAudioChunk:
     def test_extract_audio_chunk(self) -> None:
         """Should extract and save audio chunk."""
         # Given audio file and mocked AudioFileClip with time slice 0-60 seconds
-        with patch("main.OpenAI"), patch("main.AudioFileClip") as mock_audio:
+        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk
@@ -382,7 +382,7 @@ class TestTranscribeAudioFile:
     def test_transcribe_audio_file(self) -> None:
         """Should transcribe audio file using Whisper API."""
         # Given audio file and mocked OpenAI client returning "Hello world"
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "Hello world")  # type: ignore[arg-type]
@@ -409,7 +409,7 @@ class TestTranscribeChunkedAudio:
     def test_transcribe_chunked_audio(self) -> None:
         """Should transcribe multiple chunks and join results."""
         # Given audio file split into 2 chunks with different transcription results
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.side_effect = [
@@ -450,7 +450,7 @@ class TestChunkTimestampOffsetsMinute:
 
     def test_minute_chunk_offsets(self) -> None:
         """Two 60s chunks should produce second chunk timestamps offset by 01:00."""
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
 
@@ -492,7 +492,7 @@ class TestChunkTimestampOffsetsVariable:
 
     def test_variable_short_first_chunk_offsets(self) -> None:
         """If first chunk is 1s long, second chunk timestamps should start at 00:01."""
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
 
@@ -532,7 +532,7 @@ class TestCalculateChunkParamsRounding:
 
     def test_calculate_chunk_params_rounds_to_minute(self) -> None:
         """Chunk duration should be rounded to a whole minute when reasonable."""
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             # Large file: expect chunk_duration to be rounded to nearest 60s
             num_chunks, chunk_duration = transcriber.calculate_chunk_params(100.0, 3600.0)
@@ -547,7 +547,7 @@ class TestTranscribeSmallFile:
     def test_transcribe_small_file(self) -> None:
         """Should transcribe small file without chunking."""
         # Given small audio file (1KB) and mocked transcription API
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "Full transcript")  # type: ignore[arg-type]
@@ -578,7 +578,7 @@ class TestTranscribeLargeFile:
     def test_transcribe_large_file_chunked(self) -> None:
         """Should chunk large files and transcribe."""
         # Given 30MB audio file with 2 transcribed chunks
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.side_effect = [
@@ -792,7 +792,7 @@ class TestFormatTranscriptInternal:
 
     def test_format_transcript_with_dict_segments(self) -> None:
         """Dict responses with segments should be formatted into timestamp lines."""
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             response = {
                 "segments": [
@@ -816,7 +816,7 @@ class TestFormatTranscriptInternal:
             def __init__(self, segments) -> None:
                 self.segments = segments
 
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             resp = Resp([Seg(5.0, 8.2, "SDK segment")])
             formatted = transcriber._format_transcript_with_timestamps(resp)  # type: ignore[arg-type]
@@ -829,7 +829,7 @@ class TestFormatTranscriptInternal:
             def __init__(self, text):
                 self.text = text
 
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             resp = Resp("Raw text fallback")
             formatted = transcriber._format_transcript_with_timestamps(resp)  # type: ignore[arg-type]
@@ -843,7 +843,7 @@ class TestFormatTranscriptInternal:
             def __str__(self):
                 return "DummyPreview: verbose details here"
 
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", Resp())  # type: ignore[arg-type]
@@ -867,7 +867,7 @@ class TestCleanupFunctions:
     def test_cleanup_audio_files_deletes_main_and_chunks(self, capsys) -> None:
         # Use capsys fixture to silence unused-argument warnings
         _ = capsys
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
@@ -889,7 +889,7 @@ class TestCleanupFunctions:
     def test_cleanup_audio_chunks_only_delete_chunks(self, capsys) -> None:
         # Use capsys fixture to silence unused-argument warnings
         _ = capsys
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
@@ -911,7 +911,7 @@ class TestCleanupFunctions:
 
 class TestTranscribeAudioFileDebugDict:
     def test_debug_prints_for_dict_response_without_text(self, capsys) -> None:
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", {})  # type: ignore[arg-type]
@@ -927,7 +927,7 @@ class TestTranscribeAudioFileDebugDict:
                 assert "DEBUG: response keys: []" in captured.out
 
     def test_debug_prints_for_dict_response_with_text_key(self, capsys) -> None:
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", {"text": ""})  # type: ignore[arg-type]
@@ -1060,7 +1060,7 @@ class TestEdgeCases:
     def test_exact_max_size_boundary(self) -> None:
         """Should chunk file exactly at max size."""
         # Given VideoTranscriber and file exactly 25MB (max size boundary)
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When calculate_chunk_params called at 25MB boundary
             num_chunks, _ = transcriber.calculate_chunk_params(25.0, 300.0)
@@ -1070,7 +1070,7 @@ class TestEdgeCases:
     def test_just_over_max_size_boundary(self) -> None:
         """Should chunk file over max size."""
         # Given VideoTranscriber and file 30MB (over 25MB max)
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When calculate_chunk_params called with 30MB file
             num_chunks, _ = transcriber.calculate_chunk_params(30.0, 300.0)
@@ -1080,7 +1080,7 @@ class TestEdgeCases:
     def test_very_long_audio(self) -> None:
         """Should handle very long audio duration."""
         # Given VideoTranscriber and 50MB file with 8 hour duration
-        with patch("main.OpenAI"):
+        with patch("vtt.main.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When calculate_chunk_params called with very long duration (28800 seconds = 8 hours)
             num_chunks, chunk_duration = transcriber.calculate_chunk_params(50.0, 28800.0)
@@ -1091,7 +1091,7 @@ class TestEdgeCases:
     def test_empty_transcript(self) -> None:
         """Should handle empty transcription result."""
         # Given mocked OpenAI API returning empty string
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "")  # type: ignore[arg-type]
@@ -1134,7 +1134,7 @@ class TestMainGuard:
         module = importlib.util.module_from_spec(spec) if spec else None
 
         # Mock sys.argv to avoid argparse errors during import
-        with patch("sys.argv", ["main.py"]), patch("main.main"):
+        with patch("sys.argv", ["main.py"]), patch("vtt.main.main"):
             # When we execute the module directly, main should be called
             # But when we import it, main should NOT be called
             # This test just verifies the pattern is correct
@@ -1147,7 +1147,7 @@ class TestTranscribeVerboseJson:
 
     def test_transcribe_audio_file_uses_verbose_json(self) -> None:
         """Should call Whisper API with response_format='verbose_json'."""
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
@@ -1174,7 +1174,7 @@ class TestTranscribeVerboseJson:
 
     def test_transcribe_audio_file_formats_verbose_json(self) -> None:
         """Should format verbose_json response into timestamped lines."""
-        with patch("main.OpenAI") as mock_openai:
+        with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
@@ -1228,7 +1228,7 @@ def test_debug_print_exception_while_printing_response(tmp_path, capsys, monkeyp
 
 def test_format_timestamp_exception_branch():
     # Given a transcriber
-    with patch("main.OpenAI"):
+    with patch("vtt.main.OpenAI"):
         transcriber = VideoTranscriber("key")
         # When calling _format_timestamp with a non-int-convertible value
         result = transcriber._format_timestamp("not-a-number")  # type: ignore[arg-type]
@@ -1297,7 +1297,7 @@ def test_main_guard_executes_with_mocked_deps(tmp_path: Path, monkeypatch: pytes
     monkeypatch.setattr(sys, "argv", ["main.py", str(video), "-k", "dummy", "-o", str(audio)])
 
     # When executing the project's main.py as __main__
-    runpy.run_path(str(Path(__file__).parent / "main.py"), run_name="__main__")
+    runpy.run_path(str(Path(__file__).parent.parent / "vtt" / "main.py"), run_name="__main__")
 
     # Then execution completes without raising an exception
 

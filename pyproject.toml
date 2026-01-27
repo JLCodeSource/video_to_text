@@ -9,6 +9,9 @@ dependencies = [
     "openai>=2.15.0",
 ]
 
+[project.scripts]
+vtt = "vtt.main:main"
+
 [dependency-groups]
 dev = [
     "coverage>=7.13.2",
