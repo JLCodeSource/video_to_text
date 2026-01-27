@@ -513,6 +513,34 @@ class TestDirectAudioTranscription:
                     assert "Second chunk" in result
                     assert "Third chunk" in result
 
+    def test_scan_chunks_shifts_timestamps_and_separates_with_newlines(self) -> None:
+        """Should shift timestamps for each chunk and separate with blank lines."""
+        # Given multiple chunk files with formatted timestamps
+        with patch("vtt.main.OpenAI") as mock_openai:
+            mock_client = MagicMock()
+            mock_openai.return_value = mock_client
+            mock_client.audio.transcriptions.create.side_effect = [
+                {"segments": [{"start": 0.0, "end": 2.0, "text": "First"}]},
+                {"segments": [{"start": 0.0, "end": 2.0, "text": "Second"}]},
+            ]
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                chunk0 = Path(tmpdir) / "audio_chunk0.mp3"
+                chunk1 = Path(tmpdir) / "audio_chunk1.mp3"
+                chunk0.write_text("x" * 1024)
+                chunk1.write_text("x" * 1024)
+
+                with patch("builtins.print"), patch.object(VideoTranscriber, "get_audio_duration", return_value=10.0):
+                    transcriber = VideoTranscriber("key")
+
+                    # When transcribe is called with scan_chunks=True
+                    result = transcriber.transcribe(chunk0, audio_path=None, scan_chunks=True)  # type: ignore[call-arg]
+
+                    # Then timestamps are shifted and chunks separated with blank lines
+                    assert "[00:00 - 00:02]" in result  # First chunk at 0s
+                    assert "[00:10 - 00:12]" in result  # Second chunk offset by 10s
+                    assert "\n\n" in result  # Blank line separator between chunks
+
 
 class TestTranscribeChunkedAudio:
     """Test chunked audio transcription."""

@@ -16,6 +16,7 @@ class VideoTranscriber:
     """Transcribe video audio using OpenAI's Whisper model."""
 
     MAX_SIZE_MB = 25
+    SUPPORTED_AUDIO_FORMATS = (".mp3", ".wav", ".ogg")
 
     def __init__(self, api_key: str) -> None:
         """Initialize transcriber with API key."""
@@ -289,6 +290,28 @@ class VideoTranscriber:
 
         return re.sub(r"\[(\d{2}):(\d{2}) - (\d{2}):(\d{2})\]", repl, formatted)
 
+    def _transcribe_sibling_chunks(self, base_audio_path: Path) -> str:
+        """Transcribe all sibling chunks with timestamp shifting."""
+        all_chunks = self.find_existing_chunks(base_audio_path)
+        if not all_chunks:
+            return ""
+
+        print(f"Found {len(all_chunks)} chunk files, processing in order...")
+        transcripts = []
+        cumulative_start = 0.0
+        for chunk_path in all_chunks:
+            print(f"Transcribing {chunk_path.name}...")
+            transcript = self.transcribe_audio_file(chunk_path)
+            # Shift timestamps by cumulative offset for chunks after the first
+            if transcript and cumulative_start > 0:
+                transcript = self._shift_formatted_timestamps(transcript, cumulative_start)
+            transcripts.append(transcript)
+            # Update cumulative start by the duration of this chunk
+            with contextlib.suppress(Exception):
+                cumulative_start += self.get_audio_duration(chunk_path)
+        # Separate chunk transcripts with blank lines for readability
+        return "\n\n".join(transcripts)
+
     def transcribe(
         self,
         video_path: Path,
@@ -312,7 +335,7 @@ class VideoTranscriber:
             Transcribed text from the video audio
         """
         # Check if input is already an audio file
-        is_audio_input = video_path.suffix.lower() in [".mp3", ".wav", ".ogg"]
+        is_audio_input = video_path.suffix.lower() in self.SUPPORTED_AUDIO_FORMATS
 
         if is_audio_input:
             # Validate audio file exists
@@ -333,16 +356,10 @@ class VideoTranscriber:
                 # Extract base name (remove _chunkN suffix)
                 base_stem = audio_path.stem.split("_chunk")[0]
                 base_audio_path = audio_path.with_stem(base_stem)
-                # Find all sibling chunks
-                all_chunks = self.find_existing_chunks(base_audio_path)
-                if all_chunks:
-                    print(f"Found {len(all_chunks)} chunk files, processing in order...")
-                    transcripts = []
-                    for chunk_path in all_chunks:
-                        print(f"Transcribing {chunk_path.name}...")
-                        transcript = self.transcribe_audio_file(chunk_path)
-                        transcripts.append(transcript)
-                    return " ".join(transcripts)
+                # Find and transcribe all sibling chunks
+                result = self._transcribe_sibling_chunks(base_audio_path)
+                if result:
+                    return result
         else:
             # Validate inputs
             video_path = self.validate_video_file(video_path)
