@@ -458,11 +458,13 @@ class TestExtractAudioChunkWithCustomPath:
     def test_extract_chunk_with_custom_audio_path(self) -> None:
         """Should create chunks with custom audio filename in custom directory."""
         # Given custom audio path in subdirectory and mocked AudioFileClip
-        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio:
+        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio_class:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk
-            mock_audio.return_value = mock_audio_instance
+            mock_audio_instance.__enter__.return_value = mock_audio_instance
+            mock_audio_instance.__exit__.return_value = None
+            mock_audio_class.return_value = mock_audio_instance
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 # Create custom subdirectory
