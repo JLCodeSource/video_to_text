@@ -212,19 +212,20 @@ class TestExtractAudio:
             video_path.touch()
             audio_path = Path(tmpdir) / "audio.mp3"
 
-            with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
+            with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video_class:
                 mock_video_instance = MagicMock()
                 mock_video_instance.audio = MagicMock()
-                mock_video.return_value = mock_video_instance
+                mock_video_instance.__enter__.return_value = mock_video_instance
+                mock_video_instance.__exit__.return_value = None
+                mock_video_class.return_value = mock_video_instance
 
                 transcriber = VideoTranscriber("key")
                 # When extract_audio is called with non-existent audio_path
                 transcriber.extract_audio(video_path, audio_path, force=False)
 
-                # Then VideoFileClip is created and audio is written
-                mock_video.assert_called_once_with(str(video_path))
+                # Then VideoFileClip is created and audio is written using context manager
+                mock_video_class.assert_called_once_with(str(video_path))
                 mock_video_instance.audio.write_audiofile.assert_called_once()
-                mock_video_instance.close.assert_called_once()
 
     def test_extract_audio_file_exists_no_force(self) -> None:
         """Should skip extraction when file exists and force=False."""
@@ -292,19 +293,20 @@ class TestGetAudioDuration:
     def test_get_audio_duration(self) -> None:
         """Should return audio duration in seconds."""
         # Given mocked AudioFileClip with 120.5 second duration
-        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio:
+        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio_class:
             mock_audio_instance = MagicMock()
             mock_audio_instance.duration = 120.5
-            mock_audio.return_value = mock_audio_instance
+            mock_audio_instance.__enter__.return_value = mock_audio_instance
+            mock_audio_instance.__exit__.return_value = None
+            mock_audio_class.return_value = mock_audio_instance
 
             transcriber = VideoTranscriber("key")
             # When get_audio_duration is called
             duration = transcriber.get_audio_duration(Path("audio.mp3"))
 
-            # Then duration is returned and AudioFileClip is closed
+            # Then duration is returned and AudioFileClip context manager is used
             assert duration == 120.5
-            mock_audio.assert_called_once_with("audio.mp3")
-            mock_audio_instance.close.assert_called_once()
+            mock_audio_class.assert_called_once_with("audio.mp3")
 
 
 class TestCalculateChunkParams:
@@ -355,11 +357,13 @@ class TestExtractAudioChunk:
     def test_extract_audio_chunk(self) -> None:
         """Should extract and save audio chunk."""
         # Given audio file and mocked AudioFileClip with time slice 0-60 seconds
-        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio:
+        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio_class:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk
-            mock_audio.return_value = mock_audio_instance
+            mock_audio_instance.__enter__.return_value = mock_audio_instance
+            mock_audio_instance.__exit__.return_value = None
+            mock_audio_class.return_value = mock_audio_instance
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
@@ -373,7 +377,6 @@ class TestExtractAudioChunk:
                 assert chunk_path.name == "audio_chunk0.mp3"
                 mock_audio_instance.subclipped.assert_called_once_with(0.0, 60.0)
                 mock_chunk.write_audiofile.assert_called_once()
-                mock_audio_instance.close.assert_called_once()
 
 
 class TestTranscribeAudioFile:
@@ -513,7 +516,7 @@ class TestDirectAudioTranscription:
                 chunk1.write_text("x" * 1024)
                 chunk2.write_text("x" * 1024)
 
-                with patch("builtins.print"):
+                with patch("builtins.print"), patch.object(VideoTranscriber, "get_audio_duration", return_value=60.0):
                     transcriber = VideoTranscriber("key")
 
                     # When transcribe is called with scan_chunks=True

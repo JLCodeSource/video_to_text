@@ -53,17 +53,14 @@ class VideoTranscriber:
             return
 
         print("Extracting audio from video...")
-        video: VideoFileClip = VideoFileClip(str(input_path))
-        if video.audio is not None:
-            video.audio.write_audiofile(str(audio_path), logger=None)
-        video.close()
+        with VideoFileClip(str(input_path)) as video:
+            if video.audio is not None:
+                video.audio.write_audiofile(str(audio_path), logger=None)
 
     def get_audio_duration(self, audio_path: Path) -> float:
         """Get duration of audio file in seconds."""
-        audio_clip: AudioFileClip = AudioFileClip(str(audio_path))
-        duration: float = audio_clip.duration  # type: ignore
-        audio_clip.close()
-        return duration
+        with AudioFileClip(str(audio_path)) as audio_clip:
+            return float(audio_clip.duration)  # type: ignore
 
     def find_existing_chunks(self, audio_path: Path) -> list[Path]:
         """Find all chunk files for a given audio file."""
@@ -116,11 +113,12 @@ class VideoTranscriber:
 
     def extract_audio_chunk(self, audio_path: Path, start_time: float, end_time: float, chunk_index: int) -> Path:
         """Extract a single audio chunk and save to file."""
-        audio_clip: AudioFileClip = AudioFileClip(str(audio_path))
-        chunk: AudioFileClip = audio_clip.subclipped(start_time, end_time)
-        chunk_path: Path = audio_path.with_stem(f"{audio_path.stem}_chunk{chunk_index}")
-        chunk.write_audiofile(str(chunk_path), logger="bar")
-        audio_clip.close()
+        with AudioFileClip(str(audio_path)) as audio_clip:
+            chunk: AudioFileClip = audio_clip.subclipped(start_time, end_time)
+            chunk_path: Path = audio_path.with_stem(f"{audio_path.stem}_chunk{chunk_index}")
+            chunk.write_audiofile(str(chunk_path), logger="bar")
+            with contextlib.suppress(Exception):
+                chunk.close()
         return chunk_path
 
     def transcribe_audio_file(self, audio_path: Path) -> str:
