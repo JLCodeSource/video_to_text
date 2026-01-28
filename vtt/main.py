@@ -11,7 +11,11 @@ from moviepy.video.io.VideoFileClip import VideoFileClip  # type: ignore
 from openai import OpenAI
 from openai.types.audio.transcription_verbose import TranscriptionVerbose
 
-from vtt.diarization import SpeakerDiarizer, format_diarization_output
+# Handle both package and script execution
+try:
+    from vtt.diarization import SpeakerDiarizer, format_diarization_output
+except ImportError:
+    from diarization import SpeakerDiarizer, format_diarization_output  # type: ignore[import-not-found,no-redef]
 
 
 class VideoTranscriber:
