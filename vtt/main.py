@@ -11,6 +11,8 @@ from moviepy.video.io.VideoFileClip import VideoFileClip  # type: ignore
 from openai import OpenAI
 from openai.types.audio.transcription_verbose import TranscriptionVerbose
 
+from vtt.diarization import SpeakerDiarizer
+
 
 class VideoTranscriber:
     """Transcribe video audio using OpenAI's Whisper model."""
@@ -457,6 +459,15 @@ def main() -> None:
         action="store_true",
         help="When input is a chunk file, detect and process all sibling chunks in order",
     )
+    parser.add_argument(
+        "--diarize",
+        action="store_true",
+        help="Enable speaker diarization using pyannote.audio",
+    )
+    parser.add_argument(
+        "--hf-token",
+        help="Hugging Face token for pyannote.audio models (defaults to HF_TOKEN environment variable)",
+    )
 
     args = parser.parse_args()
 
@@ -470,6 +481,19 @@ def main() -> None:
         result = transcriber.transcribe(
             input_path, audio_path, force=args.force, keep_audio=keep_audio, scan_chunks=args.scan_chunks
         )
+
+        # Apply diarization if requested
+        if args.diarize:
+            diarizer = SpeakerDiarizer(hf_token=args.hf_token)
+            # Determine the audio path used for transcription
+            actual_audio_path = audio_path if audio_path else input_path.with_suffix(".mp3")
+            if input_path.suffix.lower() in VideoTranscriber.SUPPORTED_AUDIO_FORMATS:
+                actual_audio_path = input_path
+
+            print("\nRunning speaker diarization...")
+            segments = diarizer.diarize_audio(actual_audio_path)
+            result = diarizer.apply_speakers_to_transcript(result, segments)
+
         display_result(result)
 
         if args.save_transcript:

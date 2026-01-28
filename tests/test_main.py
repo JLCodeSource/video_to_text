@@ -960,6 +960,38 @@ class TestMainCliArgumentParsing:
                 call_kwargs = mock_transcribe.call_args.kwargs
                 assert call_kwargs.get("scan_chunks") is True
 
+    def test_main_with_diarize_flag(self) -> None:
+        """Should apply diarization when --diarize flag is provided."""
+        # Given video file, API key, HF token, and --diarize flag
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "HF_TOKEN": "hf-token"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            video_path = Path(tmpdir) / "video.mp4"
+            video_path.touch()
+
+            with (
+                patch("sys.argv", ["main.py", str(video_path), "--diarize"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="[00:00 - 00:05] Hello"),
+                patch("vtt.main.SpeakerDiarizer") as mock_diarizer_class,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class.return_value = mock_diarizer
+
+                # When main() is called with --diarize flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then SpeakerDiarizer is initialized and used
+                mock_diarizer_class.assert_called_once_with(hf_token=None)
+                mock_diarizer.diarize_audio.assert_called_once()
+                mock_diarizer.apply_speakers_to_transcript.assert_called_once()
+
 
 class TestMainErrorHandling:
     """Test main function error handling."""
