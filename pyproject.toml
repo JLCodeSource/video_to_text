@@ -23,3 +23,8 @@ dev = [
     "ruff>=0.14.14",
     "pre-commit>=3.4.0",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::UserWarning:pyannote.audio.core.io",
+]

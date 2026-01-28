@@ -1079,6 +1079,129 @@ class TestMainErrorHandling:
                 assert exc_info.value.code == 1
 
 
+class TestDiarizationModeHandlers:
+    """Test diarization mode handler functions."""
+
+    def test_handle_diarize_only_mode_file_not_found(self) -> None:
+        """Should raise FileNotFoundError when audio file doesn't exist."""
+        from vtt.main import handle_diarize_only_mode
+
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
+            handle_diarize_only_mode(Path("/nonexistent.mp3"), None, None)
+
+    def test_handle_diarize_only_mode_with_save(self) -> None:
+        """Should save transcript when save_path is provided."""
+        from vtt.main import handle_diarize_only_mode
+
+        with (
+            patch.dict(os.environ, {"HF_TOKEN": "test"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+            save_path = Path(tmpdir) / "output.txt"
+
+            with (
+                patch("vtt.main.SpeakerDiarizer") as mock_diarizer_class,
+                patch("vtt.main.display_result"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer_class.return_value = mock_diarizer
+
+                handle_diarize_only_mode(audio_path, None, save_path)
+
+                assert save_path.exists()
+
+    def test_handle_apply_diarization_mode_transcript_not_found(self) -> None:
+        """Should raise FileNotFoundError when transcript doesn't exist."""
+        from vtt.main import handle_apply_diarization_mode
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+
+            with pytest.raises(FileNotFoundError, match="Transcript file not found"):
+                handle_apply_diarization_mode(audio_path, Path("/nonexistent.txt"), None, None)
+
+    def test_handle_apply_diarization_mode_audio_not_found(self) -> None:
+        """Should raise FileNotFoundError when audio file doesn't exist."""
+        from vtt.main import handle_apply_diarization_mode
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_path = Path(tmpdir) / "transcript.txt"
+            transcript_path.write_text("test")
+
+            with pytest.raises(FileNotFoundError, match="Audio file not found"):
+                handle_apply_diarization_mode(Path("/nonexistent.mp3"), transcript_path, None, None)
+
+    def test_handle_apply_diarization_mode_with_save(self) -> None:
+        """Should save transcript when save_path is provided."""
+        from vtt.main import handle_apply_diarization_mode
+
+        with (
+            patch.dict(os.environ, {"HF_TOKEN": "test"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+            transcript_path = Path(tmpdir) / "transcript.txt"
+            transcript_path.write_text("[00:00 - 00:05] Hello")
+            save_path = Path(tmpdir) / "output.txt"
+
+            with (
+                patch("vtt.main.SpeakerDiarizer") as mock_diarizer_class,
+                patch("vtt.main.display_result"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class.return_value = mock_diarizer
+
+                handle_apply_diarization_mode(audio_path, transcript_path, None, save_path)
+
+                assert save_path.exists()
+
+    def test_main_diarize_with_audio_input(self) -> None:
+        """Should use audio input path directly when input is audio file."""
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test", "HF_TOKEN": "hf-test"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+
+            with (
+                patch("sys.argv", ["main.py", str(audio_path), "--diarize"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="[00:00 - 00:05] Hello"),
+                patch("vtt.main.SpeakerDiarizer") as mock_diarizer_class,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class.return_value = mock_diarizer
+
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Should call diarize_audio with the audio input path directly
+                mock_diarizer.diarize_audio.assert_called_once_with(audio_path)
+
+    def test_transcribe_sibling_chunks_empty_chunks(self) -> None:
+        """Should return empty string when no chunks found."""
+        with patch("vtt.main.OpenAI"):
+            transcriber = VideoTranscriber("test-key")
+            audio_path = Path("/fake/audio.mp3")
+
+            with patch.object(transcriber, "find_existing_chunks", return_value=[]):
+                result = transcriber._transcribe_sibling_chunks(audio_path)  # type: ignore[attr-defined]
+
+                assert result == ""
+
+
 class TestFormatTranscriptInternal:
     """Tests for internal transcript formatting branches in main.py."""
 
