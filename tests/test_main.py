@@ -985,7 +985,9 @@ class TestMainCliArgumentParsing:
                 mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
                 mock_diarizer_class = MagicMock(return_value=mock_diarizer)
                 mock_format = MagicMock()
-                mock_lazy_import.return_value = (mock_diarizer_class, mock_format)
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
 
                 # When main() is called with --diarize flag
                 import contextlib
@@ -1017,7 +1019,9 @@ class TestMainCliArgumentParsing:
                 mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
                 mock_diarizer_class = MagicMock(return_value=mock_diarizer)
                 mock_format = MagicMock(return_value="[00:00 - 00:05] SPEAKER_00")
-                mock_lazy_import.return_value = (mock_diarizer_class, mock_format)
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
 
                 # When main() is called with --diarize-only flag
                 import contextlib
@@ -1054,7 +1058,9 @@ class TestMainCliArgumentParsing:
                 mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello world"
                 mock_diarizer_class = MagicMock(return_value=mock_diarizer)
                 mock_format = MagicMock()
-                mock_lazy_import.return_value = (mock_diarizer_class, mock_format)
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
 
                 # When main() is called with --apply-diarization flag
                 import contextlib
@@ -1123,7 +1129,9 @@ class TestDiarizationModeHandlers:
                 mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
                 mock_diarizer_class = MagicMock(return_value=mock_diarizer)
                 mock_format = MagicMock(return_value="[00:00 - 00:05] SPEAKER_00")
-                mock_lazy_import.return_value = (mock_diarizer_class, mock_format)
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
 
                 handle_diarize_only_mode(audio_path, None, save_path)
 
@@ -1174,7 +1182,9 @@ class TestDiarizationModeHandlers:
                 mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
                 mock_diarizer_class = MagicMock(return_value=mock_diarizer)
                 mock_format = MagicMock()
-                mock_lazy_import.return_value = (mock_diarizer_class, mock_format)
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
 
                 handle_apply_diarization_mode(audio_path, transcript_path, None, save_path)
 
@@ -1200,7 +1210,9 @@ class TestDiarizationModeHandlers:
                 mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
                 mock_diarizer_class = MagicMock(return_value=mock_diarizer)
                 mock_format = MagicMock()
-                mock_lazy_import.return_value = (mock_diarizer_class, mock_format)
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
 
                 import contextlib
 
