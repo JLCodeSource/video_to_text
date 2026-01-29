@@ -11,16 +11,29 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 # Generate voice 1
-response1 = client.audio.speech.create(model="tts-1", voice="alloy", input="Hello, world...")
+response1 = client.audio.speech.create(
+    model="tts-1",
+    voice="alloy",
+    input=(
+        "I have always wondered, why is it that every single programmer starts their "
+        "journey by making the computer say hello world? Is there some kind of secret tradition behind it?"
+    ),
+)
 
 # Explicit Gap: Using a string of periods/dashes creates a more forced pause
 response_gap = client.audio.speech.create(model="tts-1", voice="alloy", input=". . . . . .")
 
 # Voice 2: Onyx (Deep, low-pitched, very different from Alloy)
-response2 = client.audio.speech.create(model="tts-1", voice="onyx", input="Hello, earth...")
-
+response2 = client.audio.speech.create(
+    model="tts-1",
+    voice="onyx",
+    input=(
+        "It is simpler than you think. It originated back in nineteen seventy eight just to test if the compiler "
+        "was installed correctly. Now, it is just how we say welcome to the craft."
+    ),
+)
 # Combine binary data
-output_file = Path("hello_voices.mp3")
+output_file = Path("hello_conversation.mp3")
 with open(output_file, "wb") as f:
     f.write(response1.content)
     f.write(response_gap.content)
