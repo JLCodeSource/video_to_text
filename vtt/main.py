@@ -423,14 +423,14 @@ def display_result(transcript: str) -> None:
     print(transcript)
 
 
-def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: Path | None) -> None:
+def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto") -> None:
     """Handle --diarize-only mode: run diarization without transcription."""
     if not input_path.exists():
         msg = f"Audio file not found: {input_path}"
         raise FileNotFoundError(msg)
 
     SpeakerDiarizer, format_diarization_output, _, _ = _lazy_import_diarization()  # noqa: N806
-    diarizer = SpeakerDiarizer(hf_token=hf_token)
+    diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
     print(f"Running speaker diarization on: {input_path}")
     segments = diarizer.diarize_audio(input_path)
     result = format_diarization_output(segments)
@@ -441,7 +441,7 @@ def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: 
 
 
 def handle_apply_diarization_mode(
-    input_path: Path, transcript_path: Path, hf_token: str | None, save_path: Path | None
+    input_path: Path, transcript_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto"
 ) -> None:
     """Handle --apply-diarization mode: apply diarization to existing transcript."""
     if not transcript_path.exists():
@@ -457,7 +457,7 @@ def handle_apply_diarization_mode(
 
     # Run diarization
     SpeakerDiarizer, _, _, _ = _lazy_import_diarization()  # noqa: N806
-    diarizer = SpeakerDiarizer(hf_token=hf_token)
+    diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
     print(f"Running speaker diarization on: {input_path}")
     segments = diarizer.diarize_audio(input_path)
 
@@ -470,13 +470,14 @@ def handle_apply_diarization_mode(
         save_transcript(save_path, result)
 
 
-def handle_review_speakers(input_path: Path, hf_token: str | None, save_path: Path | None) -> None:
+def handle_review_speakers(input_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto") -> None:
     """Handle --review-speakers mode: interactive speaker review and renaming.
 
     Args:
         input_path: Path to audio file for diarization.
         hf_token: Hugging Face token for pyannote models.
         save_path: Optional path to save final transcript.
+        device: Device to use for diarization (auto/cuda/cpu).
     """
     if not input_path.exists():
         msg = f"Audio file not found: {input_path}"
@@ -494,7 +495,7 @@ def handle_review_speakers(input_path: Path, hf_token: str | None, save_path: Pa
     else:
         # Run diarization on audio file
         SpeakerDiarizer, format_diarization_output, _, _ = _lazy_import_diarization()  # noqa: N806
-        diarizer = SpeakerDiarizer(hf_token=hf_token)
+        diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
         print(f"Running speaker diarization on: {input_path}")
         segments = diarizer.diarize_audio(input_path)
 
@@ -615,6 +616,12 @@ def main() -> None:
         help="Hugging Face token for pyannote.audio models (defaults to HF_TOKEN environment variable)",
     )
     parser.add_argument(
+        "--device",
+        choices=["auto", "cuda", "cpu"],
+        default="auto",
+        help="Device to use for diarization (auto/cuda/cpu). Default: auto (uses CUDA if available)",
+    )
+    parser.add_argument(
         "--diarize-only",
         action="store_true",
         help="Run diarization on existing audio file without transcription",
@@ -635,19 +642,21 @@ def main() -> None:
         # Handle review-speakers mode
         if args.review_speakers:
             save_path = Path(args.save_transcript) if args.save_transcript else None
-            handle_review_speakers(Path(args.input_file), args.hf_token, save_path)
+            handle_review_speakers(Path(args.input_file), args.hf_token, save_path, args.device)
             return
 
         # Handle diarization-only mode
         if args.diarize_only:
             save_path = Path(args.save_transcript) if args.save_transcript else None
-            handle_diarize_only_mode(Path(args.input_file), args.hf_token, save_path)
+            handle_diarize_only_mode(Path(args.input_file), args.hf_token, save_path, args.device)
             return
 
         # Handle apply-diarization mode
         if args.apply_diarization:
             save_path = Path(args.save_transcript) if args.save_transcript else None
-            handle_apply_diarization_mode(Path(args.input_file), Path(args.apply_diarization), args.hf_token, save_path)
+            handle_apply_diarization_mode(
+                Path(args.input_file), Path(args.apply_diarization), args.hf_token, save_path, args.device
+            )
             return
 
         # Standard transcription flow
@@ -664,7 +673,7 @@ def main() -> None:
         # Apply diarization if requested
         if args.diarize:
             SpeakerDiarizer, _, _, _ = _lazy_import_diarization()  # noqa: N806
-            diarizer = SpeakerDiarizer(hf_token=args.hf_token)
+            diarizer = SpeakerDiarizer(hf_token=args.hf_token, device=args.device)
             # Determine the audio path used for transcription
             actual_audio_path = audio_path if audio_path else input_path.with_suffix(".mp3")
             if input_path.suffix.lower() in VideoTranscriber.SUPPORTED_AUDIO_FORMATS:

@@ -996,9 +996,43 @@ class TestMainCliArgumentParsing:
                     main()
 
                 # Then SpeakerDiarizer is initialized and used
-                mock_diarizer_class.assert_called_once_with(hf_token=None)
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="auto")
                 mock_diarizer.diarize_audio.assert_called_once()
                 mock_diarizer.apply_speakers_to_transcript.assert_called_once()
+
+    def test_main_with_device_flag(self) -> None:
+        """Should pass device parameter when --device flag is provided."""
+        # Given video file, API key, HF token, --diarize, and --device flags
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "HF_TOKEN": "hf-token"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            video_path = Path(tmpdir) / "video.mp4"
+            video_path.touch()
+
+            with (
+                patch("sys.argv", ["main.py", str(video_path), "--diarize", "--device", "cuda"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="[00:00 - 00:05] Hello"),
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock()
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                # When main() is called with --device flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then SpeakerDiarizer is initialized with device parameter
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="cuda")
 
     def test_main_with_diarize_only_flag(self) -> None:
         """Should run diarization without transcription when --diarize-only flag is provided."""
@@ -1030,7 +1064,7 @@ class TestMainCliArgumentParsing:
                     main()
 
                 # Then only diarization is run (no transcription)
-                mock_diarizer_class.assert_called_once_with(hf_token=None)
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="auto")
                 mock_diarizer.diarize_audio.assert_called_once_with(audio_path)
 
     def test_main_with_apply_diarization_flag(self) -> None:
@@ -1069,7 +1103,7 @@ class TestMainCliArgumentParsing:
                     main()
 
                 # Then diarization is applied to the transcript
-                mock_diarizer_class.assert_called_once_with(hf_token=None)
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="auto")
                 mock_diarizer.diarize_audio.assert_called_once_with(audio_path)
                 mock_diarizer.apply_speakers_to_transcript.assert_called_once_with(
                     "[00:00 - 00:05] Hello world", [(0.0, 5.0, "SPEAKER_00")]
