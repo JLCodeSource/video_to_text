@@ -818,7 +818,11 @@ class TestGetApiKey:
     def test_get_api_key_missing_raises_error(self) -> None:
         """Should raise ValueError when API key is missing."""
         # Given no API key in argument and no OPENAI_API_KEY environment variable
-        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="OpenAI API key not provided"):
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=False),
+            patch("os.environ.get", return_value=None),
+            pytest.raises(ValueError, match="OpenAI API key not provided"),
+        ):
             # When get_api_key is called with None
             get_api_key(None)
             # Then ValueError is raised with appropriate message
@@ -1072,11 +1076,16 @@ class TestMainErrorHandling:
     def test_main_missing_api_key(self) -> None:
         """Should exit with error when API key is missing."""
         # Given no API key in environment and video file path
-        with patch.dict(os.environ, {}, clear=True), tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
             video_path = Path(tmpdir) / "video.mp4"
             video_path.touch()
 
-            with patch("sys.argv", ["main.py", str(video_path)]), patch("builtins.print"):
+            with (
+                patch("sys.argv", ["main.py", str(video_path)]),
+                patch("builtins.print"),
+                patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=False),
+                patch("os.environ.get", return_value=None),
+            ):
                 # When main() is called without API key
                 with pytest.raises(SystemExit) as exc_info:
                     main()

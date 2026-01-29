@@ -2,6 +2,7 @@
 
 import os
 import re
+import warnings
 from pathlib import Path
 
 from pyannote.audio import Pipeline  # type: ignore[import-not-found]
@@ -43,12 +44,61 @@ class SpeakerDiarizer:
 
         Returns:
             List of (start_time, end_time, speaker_label) tuples in seconds.
+
+        Raises:
+            ValueError: If audio file is too short (less than 10 seconds required).
+
+        Note:
+            The pyannote.audio model requires audio files to be at least 10 seconds long.
+            For shorter audio files, consider padding with silence or using a different model.
         """
         pipeline = self._load_pipeline()
-        diarization = pipeline(str(audio_path))
+
+        # Suppress the torch pooling warning about degrees of freedom
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*degrees of freedom.*", category=UserWarning)
+            try:
+                diarization = pipeline(str(audio_path))
+            except ValueError as e:
+                error_str = str(e)
+                # Check if it's a sample mismatch error from pyannote
+                if "requested chunk" in error_str and "samples" in error_str and "instead of the expected" in error_str:
+                    # This is a pyannote error - could be file corruption, metadata issues, or truly too short
+                    # Extract sample counts to provide better error message
+                    import re
+
+                    match = re.search(r"resulted in (\d+) samples instead of the expected (\d+) samples", error_str)
+                    if match:
+                        actual_samples = int(match.group(1))
+                        expected_samples = int(match.group(2))
+                        sample_rate = 44100  # pyannote default
+                        actual_duration = actual_samples / sample_rate
+                        expected_duration = expected_samples / sample_rate
+
+                        # If actual duration < 10 seconds, it's genuinely too short
+                        if actual_duration < 10.0:
+                            msg = (
+                                f"Audio file is too short for diarization ({actual_duration:.2f}s). "
+                                f"The pyannote.audio model requires at least 10 seconds of audio."
+                            )
+                            raise ValueError(msg) from e
+                        # File is long enough but has sample mismatch - likely metadata/encoding issue
+                        msg = (
+                            f"Audio file sample mismatch error. This usually indicates:\n"
+                            f"  - File corruption or incomplete download\n"
+                            f"  - Metadata mismatch (reported duration doesn't match actual audio)\n"
+                            f"  - Unusual encoding that pyannote can't handle properly\n"
+                            f"Expected {expected_duration:.2f}s ({expected_samples} samples), "
+                            f"but got {actual_duration:.2f}s ({actual_samples} samples).\n\n"
+                            f"Try re-encoding to WAV format (more compatible but larger file):\n"
+                            f"  ffmpeg -i input.mp3 -acodec pcm_s16le -ar 16000 -ac 1 output.wav"
+                        )
+                        raise ValueError(msg) from e
+                # Other ValueError - just re-raise
+                raise
 
         segments = []
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
+        for turn, _, speaker in diarization.speaker_diarization.itertracks(yield_label=True):
             segments.append((turn.start, turn.end, speaker))
 
         return segments
@@ -144,3 +194,21 @@ def format_diarization_output(segments: list[tuple[float, float, str]]) -> str:
         lines.append(f"[{start_str} - {end_str}] {speaker}")
 
     return "\n".join(lines)
+
+
+def get_unique_speakers(segments: list[tuple[float, float, str]]) -> list[str]:
+    """Extract unique speaker labels from segments in order of first appearance.
+
+    Args:
+        segments: List of (start_time, end_time, speaker_label) tuples.
+
+    Returns:
+        List of unique speaker labels in order of first appearance.
+    """
+    seen = set()
+    speakers = []
+    for _, _, speaker in segments:
+        if speaker not in seen:
+            seen.add(speaker)
+            speakers.append(speaker)
+    return speakers
