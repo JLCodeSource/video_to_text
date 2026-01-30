@@ -430,9 +430,23 @@ def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: 
         raise FileNotFoundError(msg)
 
     SpeakerDiarizer, format_diarization_output, _, _ = _lazy_import_diarization()  # noqa: N806
-    diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
     print(f"Running speaker diarization on: {input_path}")
+    print(f"Using device: {device}")
+
+    # Show GPU info if using CUDA
+    import torch
+
+    if device in ("cuda", "auto") and torch.cuda.is_available():
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
+        print(f"GPU memory before: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+
+    diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
     segments = diarizer.diarize_audio(input_path)
+
+    # Show GPU memory after if using CUDA
+    if device in ("cuda", "auto") and torch.cuda.is_available():
+        print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+
     result = format_diarization_output(segments)
     display_result(result)
 
@@ -506,8 +520,9 @@ def handle_review_speakers(input_path: Path, hf_token: str | None, save_path: Pa
     speakers = []
     seen = set()
     for line in transcript.split("\n"):
-        # Match pattern: [MM:SS - MM:SS] SPEAKER_XX: text
-        match = re.match(r"\[\d{2}:\d{2} - \d{2}:\d{2}\]\s+(SPEAKER_\d+):", line)
+        # Match pattern: [MM:SS - MM:SS] SPEAKER_XX (no colon in diarization-only output)
+        # or [MM:SS - MM:SS] SPEAKER_XX: text (with colon in transcribed+diarized output)
+        match = re.match(r"\[\d{2}:\d{2} - \d{2}:\d{2}\]\s+(SPEAKER_\d+)", line)
         if match:
             speaker = match.group(1)
             if speaker not in seen:
