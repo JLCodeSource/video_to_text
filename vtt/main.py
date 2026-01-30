@@ -435,18 +435,22 @@ def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: 
     print(f"Using device: {device}")
 
     # Show GPU info if using CUDA
-    import torch
+    if device in ("cuda", "auto"):
+        import torch
 
-    if device in ("cuda", "auto") and torch.cuda.is_available():
-        print(f"GPU: {torch.cuda.get_device_name(0)}")
-        print(f"GPU memory before: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+        if torch.cuda.is_available():
+            print(f"GPU: {torch.cuda.get_device_name(0)}")
+            print(f"GPU memory before: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
 
     diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
     segments = diarizer.diarize_audio(input_path)
 
     # Show GPU memory after if using CUDA
-    if device in ("cuda", "auto") and torch.cuda.is_available():
-        print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+    if device in ("cuda", "auto"):
+        import torch
+
+        if torch.cuda.is_available():
+            print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
 
     result = format_diarization_output(segments)
     display_result(result)
@@ -485,45 +489,68 @@ def handle_apply_diarization_mode(
         save_transcript(save_path, result)
 
 
-def handle_review_speakers(input_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto") -> None:
-    """Handle --review-speakers mode: interactive speaker review and renaming.
+def handle_review_speakers(
+    input_path: Path | None = None,
+    hf_token: str | None = None,
+    save_path: Path | None = None,
+    device: str = "auto",
+    transcript: str | None = None,
+) -> str:
+    """Handle interactive speaker review and renaming for diarization workflows.
+
+    This function implements the review step that runs automatically in
+    diarization modes, unless disabled with ``--no-review-speakers``. It is
+    used internally and is not exposed as a direct CLI flag.
 
     Args:
-        input_path: Path to audio file for diarization.
-        hf_token: Hugging Face token for pyannote models.
+        input_path: Path to audio/transcript file (required if transcript is None).
+        hf_token: Hugging Face token for pyannote models (required if running diarization).
         save_path: Optional path to save final transcript.
         device: Device to use for diarization (auto/cuda/cpu).
-    """
-    if not input_path.exists():
-        msg = f"Audio file not found: {input_path}"
-        raise FileNotFoundError(msg)
+        transcript: Pre-computed transcript string. If provided, skips diarization step.
 
+    Returns:
+        Final transcript with speaker labels applied.
+    """
     _, _, _get_unique_speakers, get_speaker_context_lines = _lazy_import_diarization()
 
-    # Check if input is a transcript file (text file) or audio file
-    is_transcript = input_path.suffix.lower() in [".txt", ".srt", ".vtt"]
-
-    if is_transcript:
-        # Load transcript from file
-        print(f"Loading transcript from: {input_path}")
-        transcript = input_path.read_text()
+    # If transcript is provided, use it directly
+    if transcript is not None:
+        final_transcript = transcript
     else:
-        # Run diarization on audio file
-        SpeakerDiarizer, format_diarization_output, _, _ = _lazy_import_diarization()  # noqa: N806
-        diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
-        print(f"Running speaker diarization on: {input_path}")
-        segments = diarizer.diarize_audio(input_path)
+        # Need input_path if transcript not provided
+        if input_path is None:
+            msg = "Either input_path or transcript must be provided"
+            raise ValueError(msg)
 
-        # Format diarization output as transcript
-        transcript = format_diarization_output(segments)
+        if not input_path.exists():
+            msg = f"Audio file not found: {input_path}"
+            raise FileNotFoundError(msg)
+
+        # Check if input is a transcript file (text file) or audio file
+        is_transcript = input_path.suffix.lower() in [".txt", ".srt", ".vtt"]
+
+        if is_transcript:
+            # Load transcript from file
+            print(f"Loading transcript from: {input_path}")
+            final_transcript = input_path.read_text()
+        else:
+            # Run diarization on audio file
+            SpeakerDiarizer, format_diarization_output, _, _ = _lazy_import_diarization()  # noqa: N806
+            diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
+            print(f"Running speaker diarization on: {input_path}")
+            segments = diarizer.diarize_audio(input_path)
+
+            # Format diarization output as transcript
+            final_transcript = format_diarization_output(segments)
 
     # Extract unique speakers from transcript by parsing speaker labels
     speakers = []
     seen = set()
-    for line in transcript.split("\n"):
-        # Match pattern: [MM:SS - MM:SS] SPEAKER_XX (no colon in diarization-only output)
-        # or [MM:SS - MM:SS] SPEAKER_XX: text (with colon in transcribed+diarized output)
-        match = re.match(r"\[\d{2}:\d{2} - \d{2}:\d{2}\]\s+(SPEAKER_\d+)", line)
+    for line in final_transcript.split("\n"):
+        # Match pattern: [MM:SS - MM:SS] SPEAKER_XX: text
+        # (aligned with get_speaker_context_lines, which expects a colon after the speaker label)
+        match = re.match(r"\[\d{2}:\d{2} - \d{2}:\d{2}\]\s+(SPEAKER_\d+):", line)
         if match:
             speaker = match.group(1)
             if speaker not in seen:
@@ -537,14 +564,14 @@ def handle_review_speakers(input_path: Path, hf_token: str | None, save_path: Pa
     speaker_mapping = {}
     for speaker in speakers:
         # Get context lines for this speaker
-        contexts = get_speaker_context_lines(transcript, speaker, context_lines=5)
+        contexts = get_speaker_context_lines(final_transcript, speaker, context_lines=5)
 
         # Show context
         print(f"\n{'=' * 50}")
         print(f"Speaker: {speaker}")
         print(f"{'=' * 50}")
         # Count occurrences in transcript
-        speaker_count = transcript.count(speaker)
+        speaker_count = final_transcript.count(speaker)
         print(f"Number of occurrences: {speaker_count}")
         print("\nContext (showing first occurrence):")
         if contexts:
@@ -555,13 +582,15 @@ def handle_review_speakers(input_path: Path, hf_token: str | None, save_path: Pa
         if new_name:
             speaker_mapping[speaker] = new_name
             # Apply mapping immediately so subsequent contexts show the new name
-            transcript = transcript.replace(speaker, new_name)
+            final_transcript = final_transcript.replace(speaker, new_name)
             print(f"Renamed {speaker} -> {new_name}")
 
-    display_result(transcript)
+    display_result(final_transcript)
 
     if save_path:
-        save_transcript(save_path, transcript)
+        save_transcript(save_path, final_transcript)
+
+    return final_transcript
 
 
 def _lazy_import_diarization():
@@ -688,7 +717,8 @@ def main() -> None:
             return
 
         # Standard transcription flow
-        api_key = get_api_key(args.api_key)
+        # api_key was already obtained at line 666, no need to call get_api_key again
+        assert api_key is not None  # Should be set by line 666 for this path
         transcriber = VideoTranscriber(api_key)
 
         input_path = Path(args.input_file)
@@ -713,26 +743,13 @@ def main() -> None:
 
             # Run speaker review unless disabled
             if not args.no_review_speakers:
-                _, _, get_unique_speakers, get_speaker_context_lines = _lazy_import_diarization()
-                speakers = get_unique_speakers(segments)
-                print(f"\nFound {len(speakers)} speakers: {', '.join(speakers)}")
-                print("\nReviewing speakers...")
-
-                for speaker in speakers:
-                    contexts = get_speaker_context_lines(result, speaker, context_lines=5)
-                    print(f"\n{'=' * 50}")
-                    print(f"Speaker: {speaker}")
-                    print(f"{'=' * 50}")
-                    speaker_count = result.count(speaker)
-                    print(f"Number of occurrences: {speaker_count}")
-                    if contexts:
-                        print("\nContext (showing first occurrence):")
-                        print(contexts[0])
-
-                    new_name = input(f"\nEnter name for {speaker} (or press Enter to keep): ").strip()
-                    if new_name:
-                        result = result.replace(speaker, new_name)
-                        print(f"Renamed {speaker} -> {new_name}")
+                result = handle_review_speakers(
+                    input_path=None,
+                    hf_token=args.hf_token,
+                    save_path=None,  # Don't auto-save during review, we'll save at end
+                    device=args.device,
+                    transcript=result,
+                )
 
         display_result(result)
 
