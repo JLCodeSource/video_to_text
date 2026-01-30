@@ -7,7 +7,7 @@ import warnings
 from pathlib import Path
 
 import torch
-from pyannote.audio import Pipeline  # type: ignore[import-not-found]
+from pyannote.audio import Pipeline
 
 logger = logging.getLogger(__name__)
 
