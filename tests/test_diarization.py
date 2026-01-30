@@ -13,14 +13,14 @@ pytestmark = pytest.mark.filterwarnings("ignore::UserWarning:pyannote.audio.core
 def test_speaker_diarizer_can_import_pyannote() -> None:
     """Test that pyannote.audio can be imported."""
     try:
-        from pyannote.audio import Pipeline  # type: ignore[import-not-found]  # noqa: F401
+        from pyannote.audio import Pipeline  # noqa: F401
     except ImportError:
         pytest.fail("pyannote.audio not installed")
 
 
 def test_speaker_diarizer_initialization_with_token() -> None:
     """Test SpeakerDiarizer can be initialized with a token."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
     assert diarizer.hf_token == "test_token"  # noqa: S105
@@ -28,7 +28,7 @@ def test_speaker_diarizer_initialization_with_token() -> None:
 
 def test_speaker_diarizer_initialization_from_env() -> None:
     """Test SpeakerDiarizer can be initialized from HF_TOKEN env var."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     os.environ["HF_TOKEN"] = "env_token"  # noqa: S105
     try:
@@ -40,7 +40,7 @@ def test_speaker_diarizer_initialization_from_env() -> None:
 
 def test_speaker_diarizer_initialization_no_token_raises_error() -> None:
     """Test SpeakerDiarizer raises error when no token provided."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     # Ensure HF_TOKEN is not set
     os.environ.pop("HF_TOKEN", None)
@@ -51,23 +51,23 @@ def test_speaker_diarizer_initialization_no_token_raises_error() -> None:
 
 def test_speaker_diarizer_initialization_with_device() -> None:
     """Test SpeakerDiarizer can be initialized with a device."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
-    diarizer = SpeakerDiarizer(hf_token="test_token", device="cuda")  # noqa: S106  # type: ignore[call-arg,attr-defined]
-    assert diarizer.device == "cuda"  # type: ignore[attr-defined]
+    diarizer = SpeakerDiarizer(hf_token="test_token", device="cuda")  # noqa: S106
+    assert diarizer.device == "cuda"
 
 
 def test_speaker_diarizer_default_device_is_auto() -> None:
     """Test SpeakerDiarizer defaults to auto device."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
-    assert diarizer.device == "auto"  # type: ignore[attr-defined]
+    assert diarizer.device == "auto"
 
 
 def test_diarize_audio_returns_speaker_segments() -> None:
     """Test diarize_audio returns list of speaker segments."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -86,7 +86,7 @@ def test_diarize_audio_returns_speaker_segments() -> None:
 
     with patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline):
         audio_path = Path("/fake/audio.mp3")
-        segments = diarizer.diarize_audio(audio_path)  # type: ignore[attr-defined]
+        segments = diarizer.diarize_audio(audio_path)
 
         assert len(segments) == 1
         assert segments[0] == (0.0, 5.0, "SPEAKER_00")
@@ -94,42 +94,42 @@ def test_diarize_audio_returns_speaker_segments() -> None:
 
 def test_apply_speakers_to_transcript_adds_labels() -> None:
     """Test apply_speakers_to_transcript adds speaker labels to transcript."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
     transcript = "[00:00 - 00:05] Hello world"
     speaker_segments = [(0.0, 5.0, "SPEAKER_00")]
 
-    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)  # type: ignore[attr-defined]
+    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)
 
     assert result == "[00:00 - 00:05] SPEAKER_00: Hello world"
 
 
 def test_apply_speakers_to_transcript_empty_segments() -> None:
     """Test apply_speakers_to_transcript returns transcript unchanged when no segments."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
     transcript = "[00:00 - 00:05] Hello world"
     speaker_segments: list[tuple[float, float, str]] = []
 
-    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)  # type: ignore[attr-defined]
+    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)
 
     assert result == transcript
 
 
 def test_apply_speakers_to_transcript_no_match() -> None:
     """Test apply_speakers_to_transcript handles lines without timestamp match."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
     transcript = "Plain text without timestamps\n[00:00 - 00:05] Hello"
     speaker_segments = [(0.0, 5.0, "SPEAKER_00")]
 
-    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)  # type: ignore[attr-defined]
+    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)
 
     assert "Plain text without timestamps" in result
     assert "SPEAKER_00: Hello" in result
@@ -137,27 +137,27 @@ def test_apply_speakers_to_transcript_no_match() -> None:
 
 def test_apply_speakers_to_transcript_no_speaker_found() -> None:
     """Test apply_speakers_to_transcript when no speaker matches timestamp."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
     transcript = "[00:10 - 00:15] Hello"
     speaker_segments = [(0.0, 5.0, "SPEAKER_00")]  # Doesn't overlap with timestamp
 
-    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)  # type: ignore[attr-defined]
+    result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)
 
     assert result == "[00:10 - 00:15] Hello"  # Unchanged
 
 
 def test_find_speaker_at_time_no_match() -> None:
     """Test _find_speaker_at_time returns None when no speaker found."""
-    from vtt.diarization import SpeakerDiarizer  # type: ignore[import-not-found]
+    from vtt.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
     speaker_segments = [(0.0, 5.0, "SPEAKER_00"), (10.0, 15.0, "SPEAKER_01")]
 
-    result = diarizer._find_speaker_at_time(7.5, speaker_segments)  # type: ignore[attr-defined]
+    result = diarizer._find_speaker_at_time(7.5, speaker_segments)
 
     assert result is None
 
@@ -318,7 +318,7 @@ def test_format_diarization_output_integration() -> None:
 
 def test_get_unique_speakers_from_segments() -> None:
     """Test extracting unique speaker labels from segments."""
-    from vtt.diarization import get_unique_speakers  # type: ignore[attr-defined]
+    from vtt.diarization import get_unique_speakers
 
     segments = [
         (0.0, 5.0, "SPEAKER_00"),
@@ -336,7 +336,7 @@ def test_get_unique_speakers_from_segments() -> None:
 
 def test_get_speaker_context_lines() -> None:
     """Test extracting context lines for a specific speaker from transcript."""
-    from vtt.diarization import get_speaker_context_lines  # type: ignore[attr-defined]
+    from vtt.diarization import get_speaker_context_lines
 
     transcript = """[00:00 - 00:05] SPEAKER_00: Hello world
 [00:05 - 00:10] SPEAKER_01: This is speaker one
@@ -404,7 +404,7 @@ def test_diarize_audio_other_value_error() -> None:
 
 def test_resolve_device_auto_with_cuda_available() -> None:
     """Test device resolution: auto with CUDA available should return cuda."""
-    from vtt.diarization import resolve_device  # type: ignore[attr-defined]
+    from vtt.diarization import resolve_device
 
     with patch("torch.cuda.is_available", return_value=True):
         assert resolve_device("auto") == "cuda"
@@ -412,7 +412,7 @@ def test_resolve_device_auto_with_cuda_available() -> None:
 
 def test_resolve_device_auto_without_cuda() -> None:
     """Test device resolution: auto without CUDA should return cpu."""
-    from vtt.diarization import resolve_device  # type: ignore[attr-defined]
+    from vtt.diarization import resolve_device
 
     with patch("torch.cuda.is_available", return_value=False):
         assert resolve_device("auto") == "cpu"
@@ -420,14 +420,14 @@ def test_resolve_device_auto_without_cuda() -> None:
 
 def test_resolve_device_explicit_cuda() -> None:
     """Test device resolution: explicit cuda should return cuda."""
-    from vtt.diarization import resolve_device  # type: ignore[attr-defined]
+    from vtt.diarization import resolve_device
 
     assert resolve_device("cuda") == "cuda"
 
 
 def test_resolve_device_explicit_cpu() -> None:
     """Test device resolution: explicit cpu should return cpu."""
-    from vtt.diarization import resolve_device  # type: ignore[attr-defined]
+    from vtt.diarization import resolve_device
 
     assert resolve_device("cpu") == "cpu"
 

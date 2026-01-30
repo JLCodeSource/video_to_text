@@ -253,7 +253,7 @@ class TestTranscribeWithKeepAudio:
             # Given mock Whisper API for small file transcription
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
-            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "transcript")  # type: ignore[arg-type]
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "transcript")
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 video_path = Path(tmpdir) / "video.mp4"
@@ -280,7 +280,7 @@ class TestTranscribeWithKeepAudio:
             # Given mock Whisper API for small file transcription
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
-            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "transcript")  # type: ignore[arg-type]
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "transcript")
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 video_path = Path(tmpdir) / "video.mp4"
@@ -422,7 +422,6 @@ class TestForceOverwriteWithExistingChunks:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
-                # type: ignore[arg-type]
                 "TranscriptionVerbose",
                 "new_transcript",
             )

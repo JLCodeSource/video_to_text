@@ -389,7 +389,6 @@ class TestTranscribeAudioFile:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
-                # type: ignore[arg-type]
                 "TranscriptionVerbose",
                 "Hello world",
             )
@@ -420,7 +419,6 @@ class TestDirectAudioTranscription:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
-                # type: ignore[arg-type]
                 "TranscriptionVerbose",
                 "Test transcript",
             )
@@ -446,7 +444,6 @@ class TestDirectAudioTranscription:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
-                # type: ignore[arg-type]
                 "TranscriptionVerbose",
                 "Chunk transcript",
             )
@@ -521,7 +518,6 @@ class TestDirectAudioTranscription:
 
                     # When transcribe is called with scan_chunks=True
                     result = transcriber.transcribe(
-                        # type: ignore[call-arg]
                         chunk0,
                         audio_path=None,
                         scan_chunks=True,
@@ -555,7 +551,6 @@ class TestDirectAudioTranscription:
 
                     # When transcribe is called with scan_chunks=True
                     result = transcriber.transcribe(
-                        # type: ignore[call-arg]
                         chunk0,
                         audio_path=None,
                         scan_chunks=True,
@@ -716,7 +711,6 @@ class TestTranscribeSmallFile:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
-                # type: ignore[arg-type]
                 "TranscriptionVerbose",
                 "Full transcript",
             )
@@ -1263,7 +1257,7 @@ class TestDiarizationModeHandlers:
             audio_path = Path("/fake/audio.mp3")
 
             with patch.object(transcriber, "find_existing_chunks", return_value=[]):
-                result = transcriber._transcribe_sibling_chunks(audio_path)  # type: ignore[attr-defined]
+                result = transcriber._transcribe_sibling_chunks(audio_path)
 
                 assert result == ""
 
@@ -1395,7 +1389,7 @@ class TestFormatTranscriptInternal:
         with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
-            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", Resp())  # type: ignore[arg-type]
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", Resp())
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
@@ -1463,7 +1457,7 @@ class TestTranscribeAudioFileDebugDict:
         with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
-            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", {})  # type: ignore[arg-type]
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", {})
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
@@ -1479,7 +1473,7 @@ class TestTranscribeAudioFileDebugDict:
         with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
-            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", {"text": ""})  # type: ignore[arg-type]
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", {"text": ""})
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
@@ -1643,7 +1637,7 @@ class TestEdgeCases:
         with patch("vtt.main.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
-            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "")  # type: ignore[arg-type]
+            mock_client.audio.transcriptions.create.return_value = cast("TranscriptionVerbose", "")
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 audio_path = Path(tmpdir) / "audio.mp3"
@@ -1833,11 +1827,8 @@ def test_main_guard_executes_with_mocked_deps(tmp_path: Path, monkeypatch: pytes
     openai_mod.OpenAI = DummyClient  # type: ignore[attr-defined]
 
     # And: insert fake modules into sys.modules so runpy will use them
-    # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "moviepy.video.io.VideoFileClip", moviepy_vfc)
-    # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "moviepy.audio.io.AudioFileClip", moviepy_afc)
-    # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "openai", openai_mod)
 
     # Run main.py as a __main__ module to hit the if __name__ == "__main__" guard
