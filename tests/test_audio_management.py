@@ -1,15 +1,42 @@
 """Tests for audio file management: force overwrite, keep/delete functionality."""
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from vtt.main import VideoTranscriber
 
+# Patch moviepy for all tests in this module to avoid file operations
+pytestmark = pytest.mark.usefixtures("mock_audio_operations")
+
+
 if TYPE_CHECKING:
     from openai.types.audio.transcription_verbose import TranscriptionVerbose
+
+
+@pytest.fixture(autouse=True)
+def mock_audio_operations() -> Any:
+    """Mock AudioFileClip and VideoFileClip to avoid actual file operations."""
+    with patch("vtt.audio_manager.AudioFileClip") as mock_audio, patch("vtt.audio_manager.VideoFileClip") as mock_video:
+        # Setup audio mock with subclipped method
+        mock_audio_instance = MagicMock()
+        mock_audio_instance.duration = 120.0
+        mock_chunk = MagicMock()
+        mock_audio_instance.subclipped.return_value = mock_chunk
+        mock_audio_instance.__enter__.return_value = mock_audio_instance
+        mock_audio_instance.__exit__.return_value = None
+        mock_audio.return_value = mock_audio_instance
+
+        # Setup video mock
+        mock_video_instance = MagicMock()
+        mock_video_instance.audio = MagicMock()
+        mock_video_instance.__enter__.return_value = mock_video_instance
+        mock_video_instance.__exit__.return_value = None
+        mock_video.return_value = mock_video_instance
+
+        yield
 
 
 class TestFindExistingChunks:
@@ -441,7 +468,7 @@ class TestExtractAudioChunkWithCustomPath:
     def test_extract_chunk_with_custom_audio_path(self, tmp_path: Path) -> None:
         """Should create chunks with custom audio filename in custom directory."""
         # Given custom audio path in subdirectory and mocked AudioFileClip
-        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio_class:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio_class:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk
@@ -470,7 +497,7 @@ class TestExtractAudioChunkWithCustomPath:
     def test_extract_multiple_chunks_with_custom_path(self, tmp_path: Path) -> None:
         """Should create sequentially numbered chunks with custom audio path."""
         # Given custom audio path and multiple chunk extractions
-        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk

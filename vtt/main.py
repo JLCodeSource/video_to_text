@@ -7,20 +7,28 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from moviepy.audio.io.AudioFileClip import AudioFileClip
-from moviepy.video.io.VideoFileClip import VideoFileClip
 from openai import OpenAI
 from openai.types.audio.transcription_verbose import TranscriptionVerbose
+
+from vtt.audio_manager import AudioFileManager
 
 # Lazy imports for diarization to avoid loading torch on --help
 if TYPE_CHECKING:
     from vtt.diarization import SpeakerDiarizer, format_diarization_output  # noqa: F401
 
+# Constants
+MAX_FILE_SIZE_MB = 25
+AUDIO_EXTENSION = ".mp3"
+VIDEO_EXTENSION = ".mp4"
+TRANSCRIPT_EXTENSION = ".txt"
+CHUNK_SAFETY_FACTOR = 0.9
+SECONDS_PER_MINUTE = 60
+
 
 class VideoTranscriber:
     """Transcribe video audio using OpenAI's Whisper model."""
 
-    MAX_SIZE_MB = 25
+    MAX_SIZE_MB = MAX_FILE_SIZE_MB
     SUPPORTED_AUDIO_FORMATS = (".mp3", ".wav", ".ogg", ".m4a")
 
     def __init__(self, api_key: str) -> None:
@@ -38,34 +46,29 @@ class VideoTranscriber:
     def resolve_audio_path(self, input_path: Path, audio_path: Path | None) -> Path:
         """Resolve audio file path, ensuring .mp3 extension."""
         if audio_path is None:
-            return input_path.with_suffix(".mp3")
+            return input_path.with_suffix(AUDIO_EXTENSION)
         # Custom audio path handling
         if audio_path.suffix.lower() == ".mp3":
             # Already has .mp3 extension, accept as-is
             return audio_path
         if audio_path.suffix == "":
             # No extension, add .mp3
-            return audio_path.with_suffix(".mp3")
+            return audio_path.with_suffix(AUDIO_EXTENSION)
         # Different extension, raise error
         msg = f"Audio file must have .mp3 extension, got: {audio_path}"
         raise ValueError(msg)
 
     def extract_audio(self, input_path: Path, audio_path: Path, *, force: bool = False) -> None:
-        """Extract audio from video file if it doesn't exist or force is True."""
+        """Extract audio from video file (delegates to AudioFileManager)."""
         if audio_path.exists() and not force:
             file_size_mb = audio_path.stat().st_size / (1024 * 1024)
             print(f"Using existing audio file: {audio_path} ({file_size_mb:.1f}MB)")
             return
-
-        print("Extracting audio from video...")
-        with VideoFileClip(str(input_path)) as video:
-            if video.audio is not None:
-                video.audio.write_audiofile(str(audio_path), logger=None)
+        AudioFileManager.extract_from_video(input_path, audio_path, force=force)
 
     def get_audio_duration(self, audio_path: Path) -> float:
-        """Get duration of audio file in seconds."""
-        with AudioFileClip(str(audio_path)) as audio_clip:
-            return float(audio_clip.duration)
+        """Get audio file duration (delegates to AudioFileManager)."""
+        return AudioFileManager.get_duration(audio_path)
 
     def find_existing_chunks(self, audio_path: Path) -> list[Path]:
         """Find all chunk files for a given audio file."""
@@ -103,28 +106,22 @@ class VideoTranscriber:
         if file_size_mb <= self.MAX_SIZE_MB:
             return 1, duration
 
-        # Calculate chunk duration: (MAX_SIZE_MB / file_size_mb) * duration * 0.9 (safety margin)
+        # Calculate chunk duration: (MAX_SIZE_MB / file_size_mb) * duration * CHUNK_SAFETY_FACTOR (safety margin)
         # Base chunk duration calculation with safety margin
-        raw_chunk_duration: float = (self.MAX_SIZE_MB / file_size_mb) * duration * 0.9
+        raw_chunk_duration: float = (self.MAX_SIZE_MB / file_size_mb) * duration * CHUNK_SAFETY_FACTOR
 
         # Prefer round-minute chunk sizes for nicer timestamps: round to nearest 60s
         # Use floor division to prefer smaller (floor) minute chunks
-        minutes = max(1, int(raw_chunk_duration // 60))
-        chunk_duration: float = float(minutes * 60)
+        minutes = max(1, int(raw_chunk_duration // SECONDS_PER_MINUTE))
+        chunk_duration: float = float(minutes * SECONDS_PER_MINUTE)
 
         num_chunks: int = math.ceil(duration / chunk_duration)
 
         return num_chunks, chunk_duration
 
     def extract_audio_chunk(self, audio_path: Path, start_time: float, end_time: float, chunk_index: int) -> Path:
-        """Extract a single audio chunk and save to file."""
-        with AudioFileClip(str(audio_path)) as audio_clip:
-            chunk: AudioFileClip = audio_clip.subclipped(start_time, end_time)
-            chunk_path: Path = audio_path.with_stem(f"{audio_path.stem}_chunk{chunk_index}")
-            chunk.write_audiofile(str(chunk_path), logger="bar")
-            with contextlib.suppress(Exception):
-                chunk.close()
-        return chunk_path
+        """Extract audio chunk (delegates to AudioFileManager)."""
+        return AudioFileManager.extract_chunk(audio_path, start_time, end_time, chunk_index)
 
     def transcribe_audio_file(self, audio_path: Path) -> str:
         """Transcribe a single audio file using Whisper API with timestamps."""
@@ -285,8 +282,8 @@ class VideoTranscriber:
 
         def repl(match: re.Match) -> str:
             m1_min, m1_sec, m2_min, m2_sec = match.groups()
-            start_secs = int(m1_min) * 60 + int(m1_sec)
-            end_secs = int(m2_min) * 60 + int(m2_sec)
+            start_secs = int(m1_min) * SECONDS_PER_MINUTE + int(m1_sec)
+            end_secs = int(m2_min) * SECONDS_PER_MINUTE + int(m2_sec)
             new_start = self._format_timestamp(start_secs + int(offset_seconds))
             new_end = self._format_timestamp(end_secs + int(offset_seconds))
             return f"[{new_start} - {new_end}]"
@@ -410,7 +407,7 @@ def save_transcript(output_path: Path, transcript: str) -> None:
     """Save transcript to a file, ensuring .txt extension."""
     # Ensure output path has .txt extension
     if output_path.suffix.lower() != ".txt":
-        output_path = output_path.with_suffix(".txt")
+        output_path = output_path.with_suffix(TRANSCRIPT_EXTENSION)
     output_path.write_text(transcript)
     print(f"\nTranscript saved to: {output_path}")
 
@@ -648,7 +645,7 @@ def _handle_standard_transcription(args: Any, api_key: str) -> str:
         SpeakerDiarizer, _, _, _ = _lazy_import_diarization()  # noqa: N806
         diarizer = SpeakerDiarizer(hf_token=args.hf_token, device=args.device)
         # Determine the audio path used for transcription
-        actual_audio_path = audio_path if audio_path else input_path.with_suffix(".mp3")
+        actual_audio_path = audio_path if audio_path else input_path.with_suffix(AUDIO_EXTENSION)
         if input_path.suffix.lower() in VideoTranscriber.SUPPORTED_AUDIO_FORMATS:
             actual_audio_path = input_path
 

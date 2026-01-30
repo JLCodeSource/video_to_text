@@ -226,7 +226,7 @@ class TestExtractAudio:
         video_path.touch()
         audio_path = tmp_path / "audio.mp3"
 
-        with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video_class:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.VideoFileClip") as mock_video_class:
             mock_video_instance = MagicMock()
             mock_video_instance.audio = MagicMock()
             mock_video_instance.__enter__.return_value = mock_video_instance
@@ -249,7 +249,7 @@ class TestExtractAudio:
         audio_path = tmp_path / "audio.mp3"
         audio_path.write_text("dummy")
 
-        with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.VideoFileClip") as mock_video:
             transcriber = VideoTranscriber("key")
             with patch("builtins.print"):
                 # When extract_audio is called with existing file and force=False
@@ -266,7 +266,7 @@ class TestExtractAudio:
         audio_path = tmp_path / "audio.mp3"
         audio_path.write_text("dummy")
 
-        with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.VideoFileClip") as mock_video:
             mock_video_instance = MagicMock()
             mock_video_instance.audio = MagicMock()
             mock_video.return_value = mock_video_instance
@@ -285,7 +285,7 @@ class TestExtractAudio:
         video_path.touch()
         audio_path = tmp_path / "audio.mp3"
 
-        with patch("vtt.main.OpenAI"), patch("vtt.main.VideoFileClip") as mock_video:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.VideoFileClip") as mock_video:
             mock_video_instance = MagicMock()
             mock_video_instance.audio = None
             mock_video.return_value = mock_video_instance
@@ -304,7 +304,7 @@ class TestGetAudioDuration:
     def test_get_audio_duration(self) -> None:
         """Should return audio duration in seconds."""
         # Given mocked AudioFileClip with 120.5 second duration
-        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio_class:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio_class:
             mock_audio_instance = MagicMock()
             mock_audio_instance.duration = 120.5
             mock_audio_instance.__enter__.return_value = mock_audio_instance
@@ -368,7 +368,7 @@ class TestExtractAudioChunk:
     def test_extract_audio_chunk(self, tmp_path: Path) -> None:
         """Should extract and save audio chunk."""
         # Given audio file and mocked AudioFileClip with time slice 0-60 seconds
-        with patch("vtt.main.OpenAI"), patch("vtt.main.AudioFileClip") as mock_audio_class:
+        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio_class:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk
