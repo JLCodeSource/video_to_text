@@ -2,9 +2,17 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/docker-outside-of-docker
 {
 	"name": "video-to-text",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:bullseye",
-
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": "."
+	},
+	"remoteUser": "vscode",
+	"runArgs": [
+		"--gpus=all"
+	],
+	"hostRequirements": {
+		"gpu": "optional"
+	},
 	"features": {
 		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
 			"version": "latest",
@@ -13,19 +21,19 @@
 		},
 		"ghcr.io/devcontainers/features/python:1": {}
 	},
-
 	// Use this environment variable if you need to bind mount your local source code into a new container.
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
-	}
-
+	},
 	// Configure VS Code
-	,"customizations": {
+	"customizations": {
 		"vscode": {
 			"settings": {
 				"python.testing.pytestEnabled": true,
 				"python.testing.unittestEnabled": false,
-				"python.testing.pytestArgs": ["tests"],
+				"python.testing.pytestArgs": [
+					"tests"
+				],
 				"editor.formatOnSave": true,
 				"python.analysis.typeCheckingMode": "basic",
 				"python.analysis.autoImportCompletions": true,
@@ -38,14 +46,7 @@
 				"charliermarsh.ruff"
 			]
 		}
-	}
-
+	},
 	// Run uv bootstrap in a script so it is reusable
-	,"postCreateCommand": "/bin/bash .devcontainer/post-create.sh"
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	"postCreateCommand": "/bin/bash .devcontainer/post-create.sh"
 }

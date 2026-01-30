@@ -6,4 +6,3 @@ make install
 
 # Quick sanity output
 uv run python -V
-uv run pip list | head -20

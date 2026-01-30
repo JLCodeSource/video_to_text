@@ -818,7 +818,11 @@ class TestGetApiKey:
     def test_get_api_key_missing_raises_error(self) -> None:
         """Should raise ValueError when API key is missing."""
         # Given no API key in argument and no OPENAI_API_KEY environment variable
-        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="OpenAI API key not provided"):
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=False),
+            patch("os.environ.get", return_value=None),
+            pytest.raises(ValueError, match="OpenAI API key not provided"),
+        ):
             # When get_api_key is called with None
             get_api_key(None)
             # Then ValueError is raised with appropriate message
@@ -960,6 +964,151 @@ class TestMainCliArgumentParsing:
                 call_kwargs = mock_transcribe.call_args.kwargs
                 assert call_kwargs.get("scan_chunks") is True
 
+    def test_main_with_diarize_flag(self) -> None:
+        """Should apply diarization when --diarize flag is provided."""
+        # Given video file, API key, HF token, and --diarize flag
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "HF_TOKEN": "hf-token"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            video_path = Path(tmpdir) / "video.mp4"
+            video_path.touch()
+
+            with (
+                patch("sys.argv", ["main.py", str(video_path), "--diarize"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="[00:00 - 00:05] Hello"),
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock()
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                # When main() is called with --diarize flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then SpeakerDiarizer is initialized and used
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="auto")
+                mock_diarizer.diarize_audio.assert_called_once()
+                mock_diarizer.apply_speakers_to_transcript.assert_called_once()
+
+    def test_main_with_device_flag(self) -> None:
+        """Should pass device parameter when --device flag is provided."""
+        # Given video file, API key, HF token, --diarize, and --device flags
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "HF_TOKEN": "hf-token"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            video_path = Path(tmpdir) / "video.mp4"
+            video_path.touch()
+
+            with (
+                patch("sys.argv", ["main.py", str(video_path), "--diarize", "--device", "cuda"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="[00:00 - 00:05] Hello"),
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock()
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                # When main() is called with --device flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then SpeakerDiarizer is initialized with device parameter
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="cuda")
+
+    def test_main_with_diarize_only_flag(self) -> None:
+        """Should run diarization without transcription when --diarize-only flag is provided."""
+        # Given audio file, HF token, and --diarize-only flag
+        with (
+            patch.dict(os.environ, {"HF_TOKEN": "hf-token"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+
+            with (
+                patch("sys.argv", ["main.py", str(audio_path), "--diarize-only", "--no-review-speakers"]),
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock(return_value="[00:00 - 00:05] SPEAKER_00")
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                # When main() is called with --diarize-only flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then only diarization is run (no transcription)
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="auto")
+                mock_diarizer.diarize_audio.assert_called_once_with(audio_path)
+
+    def test_main_with_apply_diarization_flag(self) -> None:
+        """Should apply diarization to existing transcript when --apply-diarization flag is provided."""
+        # Given audio file, transcript file, HF token, and --apply-diarization flag
+        with (
+            patch.dict(os.environ, {"HF_TOKEN": "hf-token"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+            transcript_path = Path(tmpdir) / "transcript.txt"
+            transcript_path.write_text("[00:00 - 00:05] Hello world")
+
+            with (
+                patch(
+                    "sys.argv",
+                    ["main.py", str(audio_path), "--apply-diarization", str(transcript_path)],
+                ),
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello world"
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock()
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                # When main() is called with --apply-diarization flag
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Then diarization is applied to the transcript
+                mock_diarizer_class.assert_called_once_with(hf_token=None, device="auto")
+                mock_diarizer.diarize_audio.assert_called_once_with(audio_path)
+                mock_diarizer.apply_speakers_to_transcript.assert_called_once_with(
+                    "[00:00 - 00:05] Hello world", [(0.0, 5.0, "SPEAKER_00")]
+                )
+
 
 class TestMainErrorHandling:
     """Test main function error handling."""
@@ -967,16 +1116,224 @@ class TestMainErrorHandling:
     def test_main_missing_api_key(self) -> None:
         """Should exit with error when API key is missing."""
         # Given no API key in environment and video file path
-        with patch.dict(os.environ, {}, clear=True), tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
             video_path = Path(tmpdir) / "video.mp4"
             video_path.touch()
 
-            with patch("sys.argv", ["main.py", str(video_path)]), patch("builtins.print"):
+            with (
+                patch("sys.argv", ["main.py", str(video_path)]),
+                patch("builtins.print"),
+                patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=False),
+                patch("os.environ.get", return_value=None),
+            ):
                 # When main() is called without API key
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 # Then exits with error code 1
                 assert exc_info.value.code == 1
+
+
+class TestDiarizationModeHandlers:
+    """Test diarization mode handler functions."""
+
+    def test_handle_diarize_only_mode_file_not_found(self) -> None:
+        """Should raise FileNotFoundError when audio file doesn't exist."""
+        from vtt.main import handle_diarize_only_mode
+
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
+            handle_diarize_only_mode(Path("/nonexistent.mp3"), None, None)
+
+    def test_handle_diarize_only_mode_with_save(self) -> None:
+        """Should save transcript when save_path is provided."""
+        from vtt.main import handle_diarize_only_mode
+
+        with (
+            patch.dict(os.environ, {"HF_TOKEN": "test"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+            save_path = Path(tmpdir) / "output.txt"
+
+            with (
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("vtt.main.display_result"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock(return_value="[00:00 - 00:05] SPEAKER_00")
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                handle_diarize_only_mode(audio_path, None, save_path)
+
+                assert save_path.exists()
+
+    def test_handle_apply_diarization_mode_transcript_not_found(self) -> None:
+        """Should raise FileNotFoundError when transcript doesn't exist."""
+        from vtt.main import handle_apply_diarization_mode
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+
+            with pytest.raises(FileNotFoundError, match="Transcript file not found"):
+                handle_apply_diarization_mode(audio_path, Path("/nonexistent.txt"), None, None)
+
+    def test_handle_apply_diarization_mode_audio_not_found(self) -> None:
+        """Should raise FileNotFoundError when audio file doesn't exist."""
+        from vtt.main import handle_apply_diarization_mode
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_path = Path(tmpdir) / "transcript.txt"
+            transcript_path.write_text("test")
+
+            with pytest.raises(FileNotFoundError, match="Audio file not found"):
+                handle_apply_diarization_mode(Path("/nonexistent.mp3"), transcript_path, None, None)
+
+    def test_handle_apply_diarization_mode_with_save(self) -> None:
+        """Should save transcript when save_path is provided."""
+        from vtt.main import handle_apply_diarization_mode
+
+        with (
+            patch.dict(os.environ, {"HF_TOKEN": "test"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+            transcript_path = Path(tmpdir) / "transcript.txt"
+            transcript_path.write_text("[00:00 - 00:05] Hello")
+            save_path = Path(tmpdir) / "output.txt"
+
+            with (
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("vtt.main.display_result"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock()
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                handle_apply_diarization_mode(audio_path, transcript_path, None, save_path)
+
+                assert save_path.exists()
+
+    def test_main_diarize_with_audio_input(self) -> None:
+        """Should use audio input path directly when input is audio file."""
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test", "HF_TOKEN": "hf-test"}),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            audio_path = Path(tmpdir) / "audio.mp3"
+            audio_path.touch()
+
+            with (
+                patch("sys.argv", ["main.py", str(audio_path), "--diarize"]),
+                patch.object(VideoTranscriber, "transcribe", return_value="[00:00 - 00:05] Hello"),
+                patch("vtt.main._lazy_import_diarization") as mock_lazy_import,
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock()
+                mock_get_unique = MagicMock()
+                mock_get_context = MagicMock()
+                mock_lazy_import.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                import contextlib
+
+                with contextlib.suppress(SystemExit):
+                    main()
+
+                # Should call diarize_audio with the audio input path directly
+                mock_diarizer.diarize_audio.assert_called_once_with(audio_path)
+
+    def test_transcribe_sibling_chunks_empty_chunks(self) -> None:
+        """Should return empty string when no chunks found."""
+        with patch("vtt.main.OpenAI"):
+            transcriber = VideoTranscriber("test-key")
+            audio_path = Path("/fake/audio.mp3")
+
+            with patch.object(transcriber, "find_existing_chunks", return_value=[]):
+                result = transcriber._transcribe_sibling_chunks(audio_path)  # type: ignore[attr-defined]
+
+                assert result == ""
+
+    def test_review_speakers_now_automatic_with_no_review_flag(self) -> None:
+        """Test that --review-speakers has been removed, replaced with --no-review-speakers."""
+        # This replaces test_main_with_review_speakers_flag
+        # Review is now automatic for diarization modes
+
+    def test_review_speakers_with_missing_file(self) -> None:
+        """Should raise FileNotFoundError if input file doesn't exist."""
+        from vtt.main import handle_review_speakers
+
+        non_existent = Path("nonexistent_file_xyz123.txt")
+        with pytest.raises(FileNotFoundError, match="Input file not found"):
+            handle_review_speakers(non_existent, None, None)
+
+    def test_review_speakers_with_audio_file(self) -> None:
+        """Should run diarization on audio files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "test.mp3"
+            audio_path.write_text("fake audio")
+
+            with (
+                patch("vtt.main._lazy_import_diarization") as mock_lazy,
+                patch("builtins.input", side_effect=["Alice"]),
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock(return_value="[00:00 - 00:05] SPEAKER_00: Hello")
+                mock_get_unique = MagicMock(return_value=["SPEAKER_00"])
+                mock_get_context = MagicMock(return_value=["context"])
+                mock_lazy.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                from vtt.main import handle_review_speakers
+
+                handle_review_speakers(audio_path, "token", None)
+
+                # Should call diarize_audio for audio files
+                mock_diarizer.diarize_audio.assert_called_once_with(audio_path)
+                mock_format.assert_called_once()
+
+    def test_review_speakers_with_save_path(self) -> None:
+        """Should save transcript when save_path is provided."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript_path = Path(tmpdir) / "transcript.txt"
+            transcript_path.write_text("[00:00 - 00:05] SPEAKER_00: Hello")
+            save_path = Path(tmpdir) / "output.txt"
+
+            with (
+                patch("vtt.main._lazy_import_diarization") as mock_lazy,
+                patch("builtins.input", return_value=""),  # Skip renaming
+                patch("builtins.print"),
+            ):
+                mock_diarizer = MagicMock()
+                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
+                mock_format = MagicMock()
+                mock_get_unique = MagicMock(return_value=["SPEAKER_00"])
+                mock_get_context = MagicMock(return_value=["context"])
+                mock_lazy.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
+
+                from vtt.main import handle_review_speakers
+
+                handle_review_speakers(transcript_path, None, save_path)
+
+                # Should save the transcript
+                assert save_path.exists()
+                content = save_path.read_text()
+                assert "SPEAKER_00" in content
 
 
 class TestFormatTranscriptInternal:
@@ -1499,3 +1856,274 @@ def test_main_guard_executes_with_mocked_deps(tmp_path: Path, monkeypatch: pytes
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--cov=main", "--cov-report=term-missing", "--cov-report=html"])
+
+
+class TestLazyImportDiarization:
+    """Test _lazy_import_diarization import fallback."""
+
+    def test_lazy_import_normal_path(self) -> None:
+        """Should import from vtt.diarization normally."""
+        from vtt.main import _lazy_import_diarization
+
+        result = _lazy_import_diarization()
+
+        assert len(result) == 4
+        speaker_diarizer, format_output, get_unique, get_context = result
+        assert speaker_diarizer is not None
+        assert format_output is not None
+        assert get_unique is not None
+        assert get_context is not None
+
+    def test_lazy_import_fallback_path(self) -> None:
+        """Should fall back to direct import when vtt.diarization fails."""
+        import builtins
+        import sys
+        from importlib import reload
+        from unittest.mock import MagicMock
+
+        # Save original state
+        original_module = sys.modules.get("vtt.diarization")
+        original_import = builtins.__import__
+
+        # Create a mock diarization module
+        mock_diarization = MagicMock()
+        mock_diarization.SpeakerDiarizer = MagicMock()
+        mock_diarization.format_diarization_output = MagicMock()
+        mock_diarization.get_speaker_context_lines = MagicMock()
+        mock_diarization.get_unique_speakers = MagicMock()
+
+        try:
+            # Temporarily remove vtt.diarization from sys.modules
+            if "vtt.diarization" in sys.modules:
+                del sys.modules["vtt.diarization"]
+
+            # Mock the import to fail for vtt.diarization but succeed for diarization
+            def mock_import(name, *args, **kwargs):
+                if name == "vtt.diarization":
+                    msg = "Simulated import failure"
+                    raise ImportError(msg)
+                if name == "diarization":
+                    return mock_diarization
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = mock_import
+
+            # Re-import main to get fresh _lazy_import_diarization
+            import vtt.main
+
+            reload(vtt.main)
+
+            # This should use the fallback path
+            result = vtt.main._lazy_import_diarization()
+
+            assert len(result) == 4
+            # Verify we got the mock objects from the fallback import
+            assert result[0] == mock_diarization.SpeakerDiarizer
+            assert result[1] == mock_diarization.format_diarization_output
+        finally:
+            # Restore original state
+            builtins.__import__ = original_import
+            if original_module is not None:
+                sys.modules["vtt.diarization"] = original_module
+            import vtt.main
+
+            reload(vtt.main)
+
+
+class TestM4aAudioSupport:
+    """Test .m4a audio format support."""
+
+    def test_m4a_recognized_as_audio_format(self):
+        """Test that .m4a files are recognized as audio (not video)."""
+        assert ".m4a" in VideoTranscriber.SUPPORTED_AUDIO_FORMATS, ".m4a should be in SUPPORTED_AUDIO_FORMATS"
+
+
+class TestNoReviewSpeakersFlag:
+    """Test --no-review-speakers flag disables automatic review."""
+
+    def test_diarize_only_runs_review_by_default(self, tmp_path):
+        """Test that --diarize-only triggers review unless --no-review-speakers is used."""
+        from unittest.mock import MagicMock, patch
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("fake audio")
+
+        with (
+            patch("sys.argv", ["vtt", str(audio_file), "--diarize-only", "--hf-token", "hf_test"]),
+            patch("vtt.main._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt.main.handle_review_speakers") as mock_review,
+            patch("vtt.main.handle_diarize_only_mode") as _mock_diarize_only,
+            patch("builtins.print"),
+        ):
+            mock_diarization_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
+
+            main()
+
+            # Verify review WAS called (default behavior)
+            mock_review.assert_called_once()
+
+    def test_no_review_speakers_disables_review_for_diarize_only(self, tmp_path):
+        """Test that --no-review-speakers prevents review in --diarize-only mode."""
+        from unittest.mock import MagicMock, patch
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("fake audio")
+
+        with (
+            patch("sys.argv", ["vtt", str(audio_file), "--diarize-only", "--hf-token", "hf_test", "--no-review-speakers"]),
+            patch("vtt.main._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt.main.handle_review_speakers") as mock_review,
+            patch("vtt.main.handle_diarize_only_mode") as _mock_diarize_only,
+            patch("builtins.print"),
+        ):
+            mock_diarization_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
+
+            main()
+
+            # Verify review was NOT called
+            mock_review.assert_not_called()
+
+    def test_no_review_speakers_disables_review_for_apply_diarization(self, tmp_path):
+        """Test that --no-review-speakers prevents review in --apply-diarization mode."""
+        from unittest.mock import MagicMock, patch
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("fake audio")
+        transcript_file = tmp_path / "transcript.txt"
+        transcript_file.write_text("[00:00 - 00:05] SPEAKER_00: Hello")
+
+        with (
+            patch(
+                "sys.argv",
+                [
+                    "vtt",
+                    str(audio_file),
+                    "--apply-diarization",
+                    str(transcript_file),
+                    "--hf-token",
+                    "hf_test",
+                    "--no-review-speakers",
+                ],
+            ),
+            patch("vtt.main._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt.main.handle_review_speakers") as mock_review,
+            patch("vtt.main.handle_apply_diarization_mode") as _mock_apply,
+            patch("builtins.print"),
+        ):
+            mock_diarization_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
+
+            main()
+
+            # Verify review was NOT called
+            mock_review.assert_not_called()
+
+    def test_no_review_speakers_disables_review_for_diarize_transcribe(self, tmp_path):
+        """Test that --no-review-speakers prevents review in --diarize (transcribe+diarize) mode."""
+        from unittest.mock import MagicMock, patch
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("fake audio")
+
+        with (
+            patch(
+                "sys.argv",
+                ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test", "--no-review-speakers"],
+            ),
+            patch("vtt.main.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt.main._lazy_import_diarization") as mock_diarization_import,
+            patch("builtins.input") as mock_input,
+            patch("builtins.print"),
+        ):
+            mock_transcriber = MagicMock()
+            mock_transcriber.transcribe.return_value = "[00:00 - 00:05] Hello"
+            mock_transcriber_class.return_value = mock_transcriber
+
+            mock_diarizer = MagicMock()
+            mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+            mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+
+            mock_diarization_import.return_value = (
+                lambda *_args, **_kwargs: mock_diarizer,
+                MagicMock(),
+                MagicMock(return_value=["SPEAKER_00"]),
+                MagicMock(return_value=[]),
+            )
+
+            main()
+
+            # Verify input() was NOT called (no interactive review)
+            mock_input.assert_not_called()
+
+    def test_diarize_transcribe_runs_review_by_default(self, tmp_path):
+        """Test that --diarize triggers review by default."""
+        from unittest.mock import MagicMock, patch
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("fake audio")
+
+        with (
+            patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
+            patch("vtt.main.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt.main._lazy_import_diarization") as mock_diarization_import,
+            patch("builtins.input", return_value="") as mock_input,
+            patch("builtins.print"),
+        ):
+            mock_transcriber = MagicMock()
+            mock_transcriber.transcribe.return_value = "[00:00 - 00:05] Hello"
+            mock_transcriber_class.return_value = mock_transcriber
+
+            mock_diarizer = MagicMock()
+            mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+            mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+
+            mock_diarization_import.return_value = (
+                lambda *_args, **_kwargs: mock_diarizer,
+                MagicMock(),
+                MagicMock(return_value=["SPEAKER_00"]),
+                MagicMock(return_value=["context"]),
+            )
+
+            main()
+
+            # Verify input() WAS called (review happened)
+            assert mock_input.called, "Review should run by default"
+
+    def test_diarize_transcribe_speaker_rename_with_input(self, tmp_path):
+        """Test that speaker renaming works when user provides input."""
+        from unittest.mock import MagicMock, patch
+
+        from vtt.main import main
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("fake audio")
+
+        with (
+            patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
+            patch("vtt.main.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt.main._lazy_import_diarization") as mock_diarization_import,
+            patch("builtins.input", return_value="Alice") as mock_input,
+            patch("builtins.print") as mock_print,
+        ):
+            mock_transcriber = MagicMock()
+            mock_transcriber.transcribe.return_value = "[00:00 - 00:05] Hello"
+            mock_transcriber_class.return_value = mock_transcriber
+
+            mock_diarizer = MagicMock()
+            mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+            mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00 - 00:05] SPEAKER_00: Hello"
+
+            mock_diarization_import.return_value = (
+                lambda *_args, **_kwargs: mock_diarizer,
+                MagicMock(),
+                MagicMock(return_value=["SPEAKER_00"]),
+                MagicMock(return_value=["context"]),
+            )
+
+            main()
+
+            # Verify input was called
+            mock_input.assert_called()
+
+            # Verify the rename message was printed
+            print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Renamed SPEAKER_00 -> Alice" in call for call in print_calls), "Should print rename confirmation"

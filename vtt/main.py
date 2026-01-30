@@ -1,3 +1,4 @@
+# ruff: noqa: C901
 import argparse
 import contextlib
 import math
@@ -5,18 +6,23 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from moviepy.audio.io.AudioFileClip import AudioFileClip  # type: ignore
 from moviepy.video.io.VideoFileClip import VideoFileClip  # type: ignore
 from openai import OpenAI
 from openai.types.audio.transcription_verbose import TranscriptionVerbose
 
+# Lazy imports for diarization to avoid loading torch on --help
+if TYPE_CHECKING:
+    from vtt.diarization import SpeakerDiarizer, format_diarization_output  # noqa: F401
+
 
 class VideoTranscriber:
     """Transcribe video audio using OpenAI's Whisper model."""
 
     MAX_SIZE_MB = 25
-    SUPPORTED_AUDIO_FORMATS = (".mp3", ".wav", ".ogg")
+    SUPPORTED_AUDIO_FORMATS = (".mp3", ".wav", ".ogg", ".m4a")
 
     def __init__(self, api_key: str) -> None:
         """Initialize transcriber with API key."""
@@ -418,13 +424,212 @@ def display_result(transcript: str) -> None:
     print(transcript)
 
 
+def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto") -> str:
+    """Handle --diarize-only mode: run diarization without transcription.
+
+    Returns:
+        The formatted diarization output transcript.
+    """
+    if not input_path.exists():
+        msg = f"Audio file not found: {input_path}"
+        raise FileNotFoundError(msg)
+
+    SpeakerDiarizer, format_diarization_output, _, _ = _lazy_import_diarization()  # noqa: N806
+    print(f"Running speaker diarization on: {input_path}")
+    print(f"Using device: {device}")
+
+    # Show GPU info if using CUDA
+    if device in ("cuda", "auto"):
+        import torch
+
+        if torch.cuda.is_available():
+            print(f"GPU: {torch.cuda.get_device_name(0)}")
+            print(f"GPU memory before: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+
+    diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
+    segments = diarizer.diarize_audio(input_path)
+
+    # Show GPU memory after if using CUDA
+    if device in ("cuda", "auto"):  # noqa: SIM102
+        # torch was imported above if we entered this block
+        if torch.cuda.is_available():  # type: ignore[possibly-unbound]
+            print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+
+    result = format_diarization_output(segments)
+    display_result(result)
+
+    if save_path:
+        save_transcript(save_path, result)
+
+    return result
+
+
+def handle_apply_diarization_mode(
+    input_path: Path, transcript_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto"
+) -> str:
+    """Handle --apply-diarization mode: apply diarization to existing transcript.
+
+    Returns:
+        The transcript with speaker labels applied.
+    """
+    if not transcript_path.exists():
+        msg = f"Transcript file not found: {transcript_path}"
+        raise FileNotFoundError(msg)
+
+    if not input_path.exists():
+        msg = f"Audio file not found: {input_path}"
+        raise FileNotFoundError(msg)
+
+    # Load transcript
+    transcript = transcript_path.read_text()
+
+    # Run diarization
+    SpeakerDiarizer, _, _, _ = _lazy_import_diarization()  # noqa: N806
+    diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
+    print(f"Running speaker diarization on: {input_path}")
+    segments = diarizer.diarize_audio(input_path)
+
+    # Apply speakers to transcript
+    print("Applying speaker labels to transcript...")
+    result = diarizer.apply_speakers_to_transcript(transcript, segments)
+    display_result(result)
+
+    if save_path:
+        save_transcript(save_path, result)
+
+    return result
+
+
+def handle_review_speakers(
+    input_path: Path | None = None,
+    hf_token: str | None = None,
+    save_path: Path | None = None,
+    device: str = "auto",
+    transcript: str | None = None,
+) -> str:
+    """Handle interactive speaker review and renaming for diarization workflows.
+
+    This function implements the review step that runs automatically in
+    diarization modes, unless disabled with ``--no-review-speakers``. It is
+    used internally and is not exposed as a direct CLI flag.
+
+    Args:
+        input_path: Path to audio/transcript file (required if transcript is None).
+        hf_token: Hugging Face token for pyannote models (required if running diarization).
+        save_path: Optional path to save final transcript.
+        device: Device to use for diarization (auto/cuda/cpu).
+        transcript: Pre-computed transcript string. If provided, skips diarization step.
+
+    Returns:
+        Final transcript with speaker labels applied.
+    """
+    _, _, _get_unique_speakers, get_speaker_context_lines = _lazy_import_diarization()
+
+    # If transcript is provided, use it directly
+    if transcript is not None:
+        final_transcript = transcript
+    else:
+        # Need input_path if transcript not provided
+        if input_path is None:
+            msg = "Either input_path or transcript must be provided"
+            raise ValueError(msg)
+
+        if not input_path.exists():
+            msg = f"Input file not found: {input_path}"
+            raise FileNotFoundError(msg)
+
+        # Check if input is a transcript file (text file) or audio file
+        is_transcript = input_path.suffix.lower() in [".txt", ".srt", ".vtt"]
+
+        if is_transcript:
+            # Load transcript from file
+            print(f"Loading transcript from: {input_path}")
+            final_transcript = input_path.read_text()
+        else:
+            # Run diarization on audio file
+            SpeakerDiarizer, format_diarization_output, _, _ = _lazy_import_diarization()  # noqa: N806
+            diarizer = SpeakerDiarizer(hf_token=hf_token, device=device)
+            print(f"Running speaker diarization on: {input_path}")
+            segments = diarizer.diarize_audio(input_path)
+
+            # Format diarization output as transcript
+            final_transcript = format_diarization_output(segments)
+
+    # Extract unique speakers from transcript by parsing speaker labels
+    speakers = []
+    seen = set()
+    for line in final_transcript.split("\n"):
+        # Match pattern: [MM:SS - MM:SS] SPEAKER_XX: text (with colon)
+        # or [MM:SS - MM:SS] SPEAKER_XX (without colon, from diarization-only output)
+        match = re.match(r"\[\d{2}:\d{2} - \d{2}:\d{2}\]\s+(SPEAKER_\d+):?", line)
+        if match:
+            speaker = match.group(1)
+            if speaker not in seen:
+                seen.add(speaker)
+                speakers.append(speaker)
+
+    print(f"\nFound {len(speakers)} speakers: {', '.join(speakers)}")
+    print("\nReviewing speakers...")
+
+    # Review each speaker interactively
+    speaker_mapping = {}
+    for speaker in speakers:
+        # Get context lines for this speaker
+        contexts = get_speaker_context_lines(final_transcript, speaker, context_lines=5)
+
+        # Show context
+        print(f"\n{'=' * 50}")
+        print(f"Speaker: {speaker}")
+        print(f"{'=' * 50}")
+        # Count occurrences in transcript
+        speaker_count = final_transcript.count(speaker)
+        print(f"Number of occurrences: {speaker_count}")
+        print("\nContext (showing first occurrence):")
+        if contexts:
+            print(contexts[0])
+
+        # Prompt for name
+        new_name = input(f"\nEnter name for {speaker} (or press Enter to keep): ").strip()
+        if new_name:
+            speaker_mapping[speaker] = new_name
+            # Apply mapping immediately so subsequent contexts show the new name
+            final_transcript = final_transcript.replace(speaker, new_name)
+            print(f"Renamed {speaker} -> {new_name}")
+
+    display_result(final_transcript)
+
+    if save_path:
+        save_transcript(save_path, final_transcript)
+
+    return final_transcript
+
+
+def _lazy_import_diarization():
+    """Lazy import diarization module to avoid loading torch on --help."""
+    try:
+        from vtt.diarization import (
+            SpeakerDiarizer,
+            format_diarization_output,
+            get_speaker_context_lines,
+            get_unique_speakers,
+        )
+    except ImportError:
+        from diarization import (  # type: ignore[import-not-found]
+            SpeakerDiarizer,
+            format_diarization_output,
+            get_speaker_context_lines,
+            get_unique_speakers,
+        )
+    return SpeakerDiarizer, format_diarization_output, get_unique_speakers, get_speaker_context_lines
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Transcribe video or audio files using OpenAI's Whisper model",
     )
     parser.add_argument(
         "input_file",
-        help="Path to the video or audio file to transcribe (.mp4, .mp3, .wav, .ogg)",
+        help="Path to the video or audio file to transcribe (.mp4, .mp3, .wav, .ogg, .m4a)",
     )
     parser.add_argument(
         "-k",
@@ -457,11 +662,84 @@ def main() -> None:
         action="store_true",
         help="When input is a chunk file, detect and process all sibling chunks in order",
     )
+    parser.add_argument(
+        "--diarize",
+        action="store_true",
+        help="Enable speaker diarization using pyannote.audio",
+    )
+    parser.add_argument(
+        "--hf-token",
+        help="Hugging Face token for pyannote.audio models (defaults to HF_TOKEN environment variable)",
+    )
+    parser.add_argument(
+        "--device",
+        choices=["auto", "cuda", "gpu", "cpu"],
+        default="auto",
+        help=(
+            "Device for diarization: 'auto' (GPU if available), 'gpu'/'cuda' (force GPU), 'cpu'."
+            " Set DISABLE_GPU=1 to force CPU."
+        ),
+    )
+    parser.add_argument(
+        "--diarize-only",
+        action="store_true",
+        help="Run diarization on existing audio file without transcription",
+    )
+    parser.add_argument(
+        "--apply-diarization",
+        help="Apply diarization to an existing transcript file",
+    )
+    parser.add_argument(
+        "--no-review-speakers",
+        action="store_true",
+        help="Skip interactive speaker review (default: review is ON for all diarization modes)",
+    )
 
     args = parser.parse_args()
 
     try:
-        api_key = get_api_key(args.api_key)
+        # When running only diarization or applying diarization, OpenAI API key is not required
+        api_key = None if args.diarize_only or args.apply_diarization else get_api_key(args.api_key)
+
+        # Handle diarization-only mode
+        if args.diarize_only:
+            save_path = Path(args.save_transcript) if args.save_transcript else None
+            diarization_result = handle_diarize_only_mode(Path(args.input_file), args.hf_token, save_path, args.device)
+
+            # Run review unless disabled
+            if not args.no_review_speakers:
+                # Pass the diarization result directly to avoid redundant diarization
+                handle_review_speakers(
+                    input_path=None,
+                    hf_token=args.hf_token,
+                    save_path=save_path,
+                    device=args.device,
+                    transcript=diarization_result,
+                )
+            return
+
+        # Handle apply-diarization mode
+        if args.apply_diarization:
+            save_path = Path(args.save_transcript) if args.save_transcript else None
+            apply_result = handle_apply_diarization_mode(
+                Path(args.input_file), Path(args.apply_diarization), args.hf_token, save_path, args.device
+            )
+
+            # Run review unless disabled
+            if not args.no_review_speakers:
+                # Pass the result directly to avoid redundant file I/O
+                handle_review_speakers(
+                    input_path=None,
+                    hf_token=args.hf_token,
+                    save_path=save_path,
+                    device=args.device,
+                    transcript=apply_result,
+                )
+            return
+
+        # Standard transcription flow
+        # api_key was already obtained at line 691, no need to call get_api_key again
+        assert api_key is not None  # Should be set by line 691 for this path
         transcriber = VideoTranscriber(api_key)
 
         input_path = Path(args.input_file)
@@ -470,6 +748,30 @@ def main() -> None:
         result = transcriber.transcribe(
             input_path, audio_path, force=args.force, keep_audio=keep_audio, scan_chunks=args.scan_chunks
         )
+
+        # Apply diarization if requested
+        if args.diarize:
+            SpeakerDiarizer, _, _, _ = _lazy_import_diarization()  # noqa: N806
+            diarizer = SpeakerDiarizer(hf_token=args.hf_token, device=args.device)
+            # Determine the audio path used for transcription
+            actual_audio_path = audio_path if audio_path else input_path.with_suffix(".mp3")
+            if input_path.suffix.lower() in VideoTranscriber.SUPPORTED_AUDIO_FORMATS:
+                actual_audio_path = input_path
+
+            print("\nRunning speaker diarization...")
+            segments = diarizer.diarize_audio(actual_audio_path)
+            result = diarizer.apply_speakers_to_transcript(result, segments)
+
+            # Run speaker review unless disabled
+            if not args.no_review_speakers:
+                result = handle_review_speakers(
+                    input_path=None,
+                    hf_token=args.hf_token,
+                    save_path=None,  # Don't auto-save during review, we'll save at end
+                    device=args.device,
+                    transcript=result,
+                )
+
         display_result(result)
 
         if args.save_transcript:

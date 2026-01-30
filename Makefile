@@ -2,10 +2,10 @@
 PYTHON ?= python
 PIP ?= pip
 
-.PHONY: help install test lint ruff-check ruff-fix mypy format clean
+.PHONY: help install test test-integration lint ruff-check ruff-fix mypy format clean
 
 help:
-	@echo "Available targets: install, test, lint, ruff-check, ruff-fix, mypy, format, clean"
+	@echo "Available targets: install, test, test-integration, lint, ruff-check, ruff-fix, mypy, format, clean"
 
 # Install development tooling (uv) and sync environment
 install:
@@ -18,6 +18,9 @@ install:
 # Use `uv run` for all runtime targets so commands run inside the project's environment
 test:
 	@uv run pytest -v --cov=./ --cov-report=term-missing
+
+test-integration:
+	@uv run pytest -v -k integration
 
 ruff-check:
 	@uv run ruff check .

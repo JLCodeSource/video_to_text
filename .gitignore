@@ -1,7 +1,9 @@
 # Custom
 *.mp3
+!/tests/*.mp3
 *.ogg
 *.wav
+*.m4a
 *.mp4
 *.txt
 

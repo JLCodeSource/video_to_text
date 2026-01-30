@@ -7,6 +7,8 @@ requires-python = ">=3.13"
 dependencies = [
     "moviepy>=2.2.1",
     "openai>=2.15.0",
+    "pyannote.audio>=3.1.0",
+    "torch>=2.1.0",
 ]
 
 [project.scripts]
@@ -20,4 +22,14 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.14",
     "pre-commit>=3.4.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::UserWarning:pyannote.audio.core.io",
+    "ignore::UserWarning:pyannote.audio.models.blocks.pooling",
+]
+markers = [
+    "integration: marks tests as integration tests (require external services/models)",
 ]

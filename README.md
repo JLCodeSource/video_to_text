@@ -21,6 +21,22 @@ Dependencies
  - openai (Whisper API client)
  - Dev / test: pytest, mypy, ruff, pre-commit, coverage
 
+GPU Support for Diarization
+ - The speaker diarization feature (`--diarize`) can leverage CUDA GPUs for faster processing
+ - By default, the tool uses `--device auto` which automatically detects and uses CUDA if available
+ - To explicitly control device selection, use `--device cuda` or `--device cpu`
+ - **Prerequisites for GPU support:**
+   - NVIDIA GPU with CUDA support
+   - NVIDIA drivers installed on the host system
+   - `nvidia-container-toolkit` installed on the host (for Docker/devcontainer)
+ - **Devcontainer GPU Setup (Optional):**
+   - To enable GPU support in the devcontainer, update `.devcontainer/devcontainer.json`:
+     - Change `"image"` to `"nvcr.io/nvidia/pytorch:25.03-py3"` (or compatible version)
+     - Add `"runArgs": ["--gpus=all"]`
+     - Add `"hostRequirements": {"gpu": "optional"}`
+   - Note: PyTorch CUDA versions must be compatible with your host CUDA drivers
+ - If GPU is not available or fails, the tool automatically falls back to CPU
+
 Quick start
 
 1. Run the single installer which installs `uv`, creates the project's virtual
