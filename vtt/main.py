@@ -424,8 +424,12 @@ def display_result(transcript: str) -> None:
     print(transcript)
 
 
-def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto") -> None:
-    """Handle --diarize-only mode: run diarization without transcription."""
+def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto") -> str:
+    """Handle --diarize-only mode: run diarization without transcription.
+
+    Returns:
+        The formatted diarization output transcript.
+    """
     if not input_path.exists():
         msg = f"Audio file not found: {input_path}"
         raise FileNotFoundError(msg)
@@ -446,10 +450,9 @@ def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: 
     segments = diarizer.diarize_audio(input_path)
 
     # Show GPU memory after if using CUDA
-    if device in ("cuda", "auto"):
-        import torch
-
-        if torch.cuda.is_available():
+    if device in ("cuda", "auto"):  # noqa: SIM102
+        # torch was imported above if we entered this block
+        if torch.cuda.is_available():  # type: ignore[possibly-unbound]
             print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
 
     result = format_diarization_output(segments)
@@ -458,11 +461,17 @@ def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: 
     if save_path:
         save_transcript(save_path, result)
 
+    return result
+
 
 def handle_apply_diarization_mode(
     input_path: Path, transcript_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto"
-) -> None:
-    """Handle --apply-diarization mode: apply diarization to existing transcript."""
+) -> str:
+    """Handle --apply-diarization mode: apply diarization to existing transcript.
+
+    Returns:
+        The transcript with speaker labels applied.
+    """
     if not transcript_path.exists():
         msg = f"Transcript file not found: {transcript_path}"
         raise FileNotFoundError(msg)
@@ -487,6 +496,8 @@ def handle_apply_diarization_mode(
 
     if save_path:
         save_transcript(save_path, result)
+
+    return result
 
 
 def handle_review_speakers(
@@ -524,7 +535,7 @@ def handle_review_speakers(
             raise ValueError(msg)
 
         if not input_path.exists():
-            msg = f"Audio file not found: {input_path}"
+            msg = f"Input file not found: {input_path}"
             raise FileNotFoundError(msg)
 
         # Check if input is a transcript file (text file) or audio file
@@ -548,9 +559,9 @@ def handle_review_speakers(
     speakers = []
     seen = set()
     for line in final_transcript.split("\n"):
-        # Match pattern: [MM:SS - MM:SS] SPEAKER_XX: text
-        # (aligned with get_speaker_context_lines, which expects a colon after the speaker label)
-        match = re.match(r"\[\d{2}:\d{2} - \d{2}:\d{2}\]\s+(SPEAKER_\d+):", line)
+        # Match pattern: [MM:SS - MM:SS] SPEAKER_XX: text (with colon)
+        # or [MM:SS - MM:SS] SPEAKER_XX (without colon, from diarization-only output)
+        match = re.match(r"\[\d{2}:\d{2} - \d{2}:\d{2}\]\s+(SPEAKER_\d+):?", line)
         if match:
             speaker = match.group(1)
             if speaker not in seen:
@@ -693,32 +704,42 @@ def main() -> None:
         # Handle diarization-only mode
         if args.diarize_only:
             save_path = Path(args.save_transcript) if args.save_transcript else None
-            handle_diarize_only_mode(Path(args.input_file), args.hf_token, save_path, args.device)
+            diarization_result = handle_diarize_only_mode(Path(args.input_file), args.hf_token, save_path, args.device)
 
             # Run review unless disabled
             if not args.no_review_speakers:
-                input_path = Path(args.input_file)
-                review_path = save_path if save_path and save_path.exists() else input_path
-                handle_review_speakers(review_path, args.hf_token, save_path, args.device)
+                # Pass the diarization result directly to avoid redundant diarization
+                handle_review_speakers(
+                    input_path=None,
+                    hf_token=args.hf_token,
+                    save_path=save_path,
+                    device=args.device,
+                    transcript=diarization_result,
+                )
             return
 
         # Handle apply-diarization mode
         if args.apply_diarization:
             save_path = Path(args.save_transcript) if args.save_transcript else None
-            handle_apply_diarization_mode(
+            apply_result = handle_apply_diarization_mode(
                 Path(args.input_file), Path(args.apply_diarization), args.hf_token, save_path, args.device
             )
 
             # Run review unless disabled
             if not args.no_review_speakers:
-                transcript_path = save_path if save_path else Path(args.apply_diarization)
-                if transcript_path.exists():
-                    handle_review_speakers(transcript_path, args.hf_token, save_path, args.device)
+                # Pass the result directly to avoid redundant file I/O
+                handle_review_speakers(
+                    input_path=None,
+                    hf_token=args.hf_token,
+                    save_path=save_path,
+                    device=args.device,
+                    transcript=apply_result,
+                )
             return
 
         # Standard transcription flow
-        # api_key was already obtained at line 666, no need to call get_api_key again
-        assert api_key is not None  # Should be set by line 666 for this path
+        # api_key was already obtained at line 691, no need to call get_api_key again
+        assert api_key is not None  # Should be set by line 691 for this path
         transcriber = VideoTranscriber(api_key)
 
         input_path = Path(args.input_file)
