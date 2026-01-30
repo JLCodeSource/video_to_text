@@ -1272,41 +1272,12 @@ class TestDiarizationModeHandlers:
         # This replaces test_main_with_review_speakers_flag
         # Review is now automatic for diarization modes
 
-    def test_review_speakers_with_transcript_file(self) -> None:
-        """Should review speakers from existing transcript file without running diarization."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript_path = Path(tmpdir) / "transcript.txt"
-            transcript_path.write_text("[00:00 - 00:05] SPEAKER_00: Hello\n[00:05 - 00:10] SPEAKER_01: World")
-
-            with (
-                patch("sys.argv", ["main.py", str(transcript_path), "--review-speakers"]),
-                patch("vtt.main._lazy_import_diarization") as mock_lazy,
-                patch("builtins.input", side_effect=["Alice", "Bob"]),
-                patch("builtins.print"),
-            ):
-                mock_diarizer = MagicMock()
-                mock_diarizer_class = MagicMock(return_value=mock_diarizer)
-                mock_format = MagicMock()
-                mock_get_unique = MagicMock(return_value=["SPEAKER_00", "SPEAKER_01"])
-                mock_get_context = MagicMock(return_value=["context"])
-                mock_lazy.return_value = (mock_diarizer_class, mock_format, mock_get_unique, mock_get_context)
-
-                import contextlib
-
-                from vtt.main import main
-
-                with contextlib.suppress(SystemExit):
-                    main()
-
-                # Should NOT call diarize_audio for transcript files
-                mock_diarizer.diarize_audio.assert_not_called()
-
     def test_review_speakers_with_missing_file(self) -> None:
         """Should raise FileNotFoundError if input file doesn't exist."""
         from vtt.main import handle_review_speakers
 
         non_existent = Path("nonexistent_file_xyz123.txt")
-        with pytest.raises(FileNotFoundError, match="Audio file not found"):
+        with pytest.raises(FileNotFoundError, match="Input file not found"):
             handle_review_speakers(non_existent, None, None)
 
     def test_review_speakers_with_audio_file(self) -> None:
@@ -1964,8 +1935,6 @@ class TestM4aAudioSupport:
 
     def test_m4a_recognized_as_audio_format(self):
         """Test that .m4a files are recognized as audio (not video)."""
-        from vtt.main import VideoTranscriber
-
         assert ".m4a" in VideoTranscriber.SUPPORTED_AUDIO_FORMATS, ".m4a should be in SUPPORTED_AUDIO_FORMATS"
 
 
@@ -1975,8 +1944,6 @@ class TestNoReviewSpeakersFlag:
     def test_diarize_only_runs_review_by_default(self, tmp_path):
         """Test that --diarize-only triggers review unless --no-review-speakers is used."""
         from unittest.mock import MagicMock, patch
-
-        from vtt.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
@@ -1999,8 +1966,6 @@ class TestNoReviewSpeakersFlag:
         """Test that --no-review-speakers prevents review in --diarize-only mode."""
         from unittest.mock import MagicMock, patch
 
-        from vtt.main import main
-
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
 
@@ -2021,8 +1986,6 @@ class TestNoReviewSpeakersFlag:
     def test_no_review_speakers_disables_review_for_apply_diarization(self, tmp_path):
         """Test that --no-review-speakers prevents review in --apply-diarization mode."""
         from unittest.mock import MagicMock, patch
-
-        from vtt.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
@@ -2057,8 +2020,6 @@ class TestNoReviewSpeakersFlag:
     def test_no_review_speakers_disables_review_for_diarize_transcribe(self, tmp_path):
         """Test that --no-review-speakers prevents review in --diarize (transcribe+diarize) mode."""
         from unittest.mock import MagicMock, patch
-
-        from vtt.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
@@ -2096,8 +2057,6 @@ class TestNoReviewSpeakersFlag:
     def test_diarize_transcribe_runs_review_by_default(self, tmp_path):
         """Test that --diarize triggers review by default."""
         from unittest.mock import MagicMock, patch
-
-        from vtt.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")

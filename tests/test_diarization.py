@@ -552,8 +552,6 @@ def test_load_pipeline_logs_device_info() -> None:
 
 def test_disable_gpu_via_env_var() -> None:
     """Test that DISABLE_GPU env var forces CPU usage."""
-    import os
-
     from vtt.diarization import resolve_device
 
     # Set env var to disable GPU

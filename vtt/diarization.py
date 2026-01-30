@@ -11,6 +11,10 @@ from pyannote.audio import Pipeline  # type: ignore[import-not-found]
 
 logger = logging.getLogger(__name__)
 
+# Constants
+DEFAULT_DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
+PYANNOTE_DEFAULT_SAMPLE_RATE = 44100  # Default sample rate used by pyannote.audio v3.x
+
 
 def resolve_device(device: str) -> str:
     """Resolve device string to actual device (cuda or cpu).
@@ -24,8 +28,6 @@ def resolve_device(device: str) -> str:
     Note:
         If DISABLE_GPU environment variable is set, always returns "cpu".
     """
-    import os
-
     # Check if GPU is disabled via env var
     if os.environ.get("DISABLE_GPU"):
         return "cpu"
@@ -64,12 +66,15 @@ class SpeakerDiarizer:
         if self.pipeline is None:
             # Suppress TF32 reproducibility warning from pyannote
             # TF32 is disabled by pyannote for accuracy/reproducibility
-            import warnings
-
-            warnings.filterwarnings("ignore", category=UserWarning, module="pyannote.audio.utils.reproducibility")
+            warnings.filterwarnings(
+                "ignore",
+                category=UserWarning,
+                module="pyannote.audio.utils.reproducibility",
+                message=".*TF32.*",
+            )
 
             self.pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
+                DEFAULT_DIARIZATION_MODEL,
                 token=self.hf_token,
             )
             # Resolve and set device
@@ -128,15 +133,12 @@ class SpeakerDiarizer:
                 if "requested chunk" in error_str and "samples" in error_str and "instead of the expected" in error_str:
                     # This is a pyannote error - could be file corruption, metadata issues, or truly too short
                     # Extract sample counts to provide better error message
-                    import re
-
                     match = re.search(r"resulted in (\d+) samples instead of the expected (\d+) samples", error_str)
                     if match:
                         actual_samples = int(match.group(1))
                         expected_samples = int(match.group(2))
-                        sample_rate = 44100  # pyannote default
-                        actual_duration = actual_samples / sample_rate
-                        expected_duration = expected_samples / sample_rate
+                        actual_duration = actual_samples / PYANNOTE_DEFAULT_SAMPLE_RATE
+                        expected_duration = expected_samples / PYANNOTE_DEFAULT_SAMPLE_RATE
 
                         # If actual duration < 10 seconds, it's genuinely too short
                         if actual_duration < 10.0:
