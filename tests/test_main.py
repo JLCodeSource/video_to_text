@@ -231,9 +231,9 @@ class TestLazyImportDiarization:
         if not pyannote_available:
             pytest.skip("pyannote.audio not installed")
 
-        from vtt.handlers import _lazy_import_diarization
+        import vtt.handlers
 
-        result = _lazy_import_diarization()
+        result = vtt.handlers._lazy_import_diarization()
 
         assert len(result) == 4
         speaker_diarizer, format_output, get_unique, get_context = result
@@ -512,14 +512,14 @@ def test_handle_review_speakers_missing_inputs() -> None:
     """Test handle_review_speakers raises error when both input_path and transcript are None."""
     import pytest
 
-    from vtt.handlers import handle_review_speakers
+    import vtt.handlers
 
     with (  # noqa: PT012
         patch("vtt.handlers._lazy_import_diarization") as mock_import,
         pytest.raises(ValueError, match="Either input_path or transcript must be provided"),
     ):
         mock_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
-        handle_review_speakers(input_path=None, transcript=None)
+        vtt.handlers.handle_review_speakers(input_path=None, transcript=None)
 
 
 def test_cleanup_audio_files_prints_chunk_deletion(tmp_path: Path) -> None:
