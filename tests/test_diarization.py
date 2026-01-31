@@ -578,3 +578,18 @@ def test_gpu_alias_maps_to_cuda() -> None:
     with patch("torch.cuda.is_available", return_value=True):
         # 'gpu' should resolve to 'cuda' when available
         assert resolve_device("gpu") == "cuda"
+
+
+def test_add_speaker_label_with_hh_mm_ss_format() -> None:
+    """Test adding speaker label to transcript line with HH:MM:SS timestamp format."""
+    from vtt.diarization import SpeakerDiarizer
+
+    diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
+
+    # Test with HH:MM:SS format (hour:minute:second)
+    line = "[01:30:45 - 01:30:50] Hello world"
+    segments = [(5445.0, 5450.0, "SPEAKER_00")]  # 1:30:45 = 1*3600 + 30*60 + 45 = 5445s
+
+    result = diarizer._process_line(line, segments)
+
+    assert result == "[01:30:45 - 01:30:50] SPEAKER_00: Hello world"

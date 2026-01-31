@@ -187,6 +187,32 @@ class TestHandleReviewSpeakers:
 
             assert "SPEAKER_00" in result
 
+    def test_handle_review_speakers_with_transcript_file(self, tmp_path: Path) -> None:
+        """Test handle_review_speakers loads transcript from .txt file."""
+        transcript_file = tmp_path / "test.txt"
+        transcript_file.write_text("[00:00:00 - 00:00:05] SPEAKER_00: Hello")
+
+        with (
+            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("builtins.input", return_value=""),
+            patch("builtins.print"),
+        ):
+            mock_diarizer = MagicMock()
+            mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
+            mock_format = MagicMock(return_value="[00:00:00 - 00:00:05] SPEAKER_00")
+            mock_context = MagicMock(return_value=["context line"])
+
+            mock_import.return_value = (
+                lambda *_args, **_kwargs: mock_diarizer,
+                mock_format,
+                MagicMock(),
+                mock_context,
+            )
+
+            result = handle_review_speakers(input_path=transcript_file, hf_token="hf_token")  # noqa: S106
+
+            assert "SPEAKER_00" in result
+
     def test_handle_review_speakers_with_save_path(self, tmp_path: Path) -> None:
         """Test handle_review_speakers saves to specified path."""
         audio_file = tmp_path / "test.mp3"
@@ -232,7 +258,7 @@ class TestHandleStandardTranscription:
         args.diarize = False
 
         with (
-            patch("vtt.main.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
             patch("builtins.print"),
         ):
             mock_transcriber = MagicMock()
@@ -261,7 +287,7 @@ class TestHandleStandardTranscription:
         args.no_review_speakers = True
 
         with (
-            patch("vtt.main.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
             patch("vtt.handlers._lazy_import_diarization") as mock_import,
             patch("builtins.print"),
         ):
@@ -395,7 +421,7 @@ class TestNoReviewSpeakersFlag:
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt.main.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
             patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
             patch("vtt.handlers.handle_review_speakers") as mock_review,
             patch("builtins.print"),
@@ -433,7 +459,7 @@ class TestNoReviewSpeakersFlag:
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt.main.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
             patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
             patch("builtins.input", return_value="Alice") as mock_input,
             patch("builtins.print") as mock_print,

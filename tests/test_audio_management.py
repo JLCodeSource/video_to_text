@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vtt.main import VideoTranscriber
+from vtt.transcriber import VideoTranscriber
 
 # Patch moviepy for all tests in this module to avoid file operations
 pytestmark = pytest.mark.usefixtures("mock_audio_operations")
@@ -48,7 +48,7 @@ class TestFindExistingChunks:
         audio_path = tmp_path / "audio.mp3"
         audio_path.write_text("dummy")
 
-        with patch("vtt.main.OpenAI"):
+        with patch("vtt.transcriber.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When find_existing_chunks is called
             chunks = transcriber.find_existing_chunks(audio_path)
@@ -68,7 +68,7 @@ class TestFindExistingChunks:
         chunk1.write_text("chunk1")
         chunk2.write_text("chunk2")
 
-        with patch("vtt.main.OpenAI"):
+        with patch("vtt.transcriber.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When find_existing_chunks is called
             chunks = transcriber.find_existing_chunks(audio_path)
@@ -91,7 +91,7 @@ class TestFindExistingChunks:
         chunk0.write_text("chunk0")
         chunk1.write_text("chunk1")
 
-        with patch("vtt.main.OpenAI"):
+        with patch("vtt.transcriber.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When find_existing_chunks is called
             chunks = transcriber.find_existing_chunks(audio_path)
@@ -106,7 +106,7 @@ class TestFindExistingChunks:
         # Given audio path with non-existent parent directory
         audio_path = Path("/nonexistent/directory/that/does/not/exist/audio.mp3")
 
-        with patch("vtt.main.OpenAI"):
+        with patch("vtt.transcriber.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When find_existing_chunks is called
             chunks = transcriber.find_existing_chunks(audio_path)
@@ -125,7 +125,7 @@ class TestCleanupAudioFiles:
         audio_path.write_text("audio data")
         assert audio_path.exists()
 
-        with patch("vtt.main.OpenAI"), patch("builtins.print"):
+        with patch("vtt.transcriber.OpenAI"), patch("builtins.print"):
             transcriber = VideoTranscriber("key")
             # When cleanup_audio_files is called
             transcriber.cleanup_audio_files(audio_path)
@@ -143,7 +143,7 @@ class TestCleanupAudioFiles:
         chunk0.write_text("chunk0")
         chunk1.write_text("chunk1")
 
-        with patch("vtt.main.OpenAI"), patch("builtins.print"):
+        with patch("vtt.transcriber.OpenAI"), patch("builtins.print"):
             transcriber = VideoTranscriber("key")
             # When cleanup_audio_files is called
             transcriber.cleanup_audio_files(audio_path)
@@ -158,7 +158,7 @@ class TestCleanupAudioFiles:
         # Given audio file doesn't exist
         audio_path = tmp_path / "audio.mp3"
 
-        with patch("vtt.main.OpenAI"), patch("builtins.print"):
+        with patch("vtt.transcriber.OpenAI"), patch("builtins.print"):
             transcriber = VideoTranscriber("key")
             # When cleanup_audio_files is called
             # Then no exception is raised (graceful handling)
@@ -178,7 +178,7 @@ class TestCleanupAudioChunks:
         chunk0.write_text("chunk0")
         chunk1.write_text("chunk1")
 
-        with patch("vtt.main.OpenAI"), patch("builtins.print"):
+        with patch("vtt.transcriber.OpenAI"), patch("builtins.print"):
             transcriber = VideoTranscriber("key")
             # When cleanup_audio_chunks is called
             transcriber.cleanup_audio_chunks(audio_path)
@@ -194,7 +194,7 @@ class TestTranscribeChunkedAudioKeepChunks:
 
     def test_keep_chunks_false_deletes_chunks(self, tmp_path: Path) -> None:
         """Should delete chunks after transcription when keep_chunks=False."""
-        with patch("vtt.main.OpenAI") as mock_openai:
+        with patch("vtt.transcriber.OpenAI") as mock_openai:
             # Given mock Whisper API and chunk files
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
@@ -228,7 +228,7 @@ class TestTranscribeChunkedAudioKeepChunks:
 
     def test_keep_chunks_true_keeps_chunks(self, tmp_path: Path) -> None:
         """Should keep chunks after transcription when keep_chunks=True."""
-        with patch("vtt.main.OpenAI") as mock_openai:
+        with patch("vtt.transcriber.OpenAI") as mock_openai:
             # Given mock Whisper API and chunk files
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
@@ -266,7 +266,7 @@ class TestTranscribeWithKeepAudio:
 
     def test_transcribe_keep_audio_true_keeps_files(self, tmp_path: Path) -> None:
         """Should keep audio file after transcription when keep_audio=True."""
-        with patch("vtt.main.OpenAI") as mock_openai:
+        with patch("vtt.transcriber.OpenAI") as mock_openai:
             # Given mock Whisper API for small file transcription
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
@@ -292,7 +292,7 @@ class TestTranscribeWithKeepAudio:
 
     def test_transcribe_keep_audio_false_deletes_files(self, tmp_path: Path) -> None:
         """Should delete audio file after transcription when keep_audio=False."""
-        with patch("vtt.main.OpenAI") as mock_openai:
+        with patch("vtt.transcriber.OpenAI") as mock_openai:
             # Given mock Whisper API for small file transcription
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
@@ -322,7 +322,7 @@ class TestTranscribeLargeWithKeepAudio:
 
     def test_large_file_keep_audio_true_keeps_chunks(self, tmp_path: Path) -> None:
         """Should keep chunks for large files when keep_audio=True."""
-        with patch("vtt.main.OpenAI") as mock_openai:
+        with patch("vtt.transcriber.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.side_effect = ["chunk1", "chunk2"]
@@ -355,7 +355,7 @@ class TestTranscribeLargeWithKeepAudio:
 
     def test_large_file_keep_audio_false_deletes_chunks(self, tmp_path: Path) -> None:
         """Should delete chunks for large files when keep_audio=False."""
-        with patch("vtt.main.OpenAI") as mock_openai:
+        with patch("vtt.transcriber.OpenAI") as mock_openai:
             # Given mock Whisper API and large audio file requiring chunking
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
@@ -391,7 +391,7 @@ class TestTranscribeLargeWithKeepAudio:
         """Ensure existing chunk files are used instead of re-extraction."""
 
         def test_transcribe_uses_existing_chunks(self, tmp_path: Path) -> None:
-            with patch("vtt.main.OpenAI") as mock_openai:
+            with patch("vtt.transcriber.OpenAI") as mock_openai:
                 mock_client = MagicMock()
                 mock_openai.return_value = mock_client
                 mock_client.audio.transcriptions.create.side_effect = ["chunk1", "chunk2"]
@@ -429,7 +429,7 @@ class TestForceOverwriteWithExistingChunks:
 
     def test_force_overwrite_with_existing_chunks(self, tmp_path: Path) -> None:
         """Should pass force flag correctly when re-extracting audio."""
-        with patch("vtt.main.OpenAI") as mock_openai:
+        with patch("vtt.transcriber.OpenAI") as mock_openai:
             # Given existing audio and chunk files
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
@@ -468,7 +468,7 @@ class TestExtractAudioChunkWithCustomPath:
     def test_extract_chunk_with_custom_audio_path(self, tmp_path: Path) -> None:
         """Should create chunks with custom audio filename in custom directory."""
         # Given custom audio path in subdirectory and mocked AudioFileClip
-        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio_class:
+        with patch("vtt.transcriber.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio_class:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk
@@ -497,7 +497,7 @@ class TestExtractAudioChunkWithCustomPath:
     def test_extract_multiple_chunks_with_custom_path(self, tmp_path: Path) -> None:
         """Should create sequentially numbered chunks with custom audio path."""
         # Given custom audio path and multiple chunk extractions
-        with patch("vtt.main.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio:
+        with patch("vtt.transcriber.OpenAI"), patch("vtt.audio_manager.AudioFileClip") as mock_audio:
             mock_audio_instance = MagicMock()
             mock_chunk = MagicMock()
             mock_audio_instance.subclipped.return_value = mock_chunk
@@ -541,7 +541,7 @@ class TestExtractAudioChunkWithCustomPath:
         chunk1.write_text("chunk1")
         chunk2.write_text("chunk2")
 
-        with patch("vtt.main.OpenAI"):
+        with patch("vtt.transcriber.OpenAI"):
             transcriber = VideoTranscriber("key")
             # When find_existing_chunks is called with custom path
             chunks = transcriber.find_existing_chunks(audio_path)

@@ -240,7 +240,7 @@ def handle_standard_transcription(args: Any, api_key: str) -> str:
     Returns:
         The final transcript (with or without speaker labels).
     """
-    from vtt.main import VideoTranscriber
+    from vtt.transcriber import VideoTranscriber
 
     transcriber = VideoTranscriber(api_key)
 

@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from vtt.cli import create_parser
-from vtt.main import VideoTranscriber, get_api_key, main
+from vtt.main import get_api_key, main
+from vtt.transcriber import VideoTranscriber
 
 
 class TestGetApiKey:
@@ -150,6 +151,46 @@ class TestCreateParser:
         assert args.hf_token == "test-token"  # noqa: S105
 
 
+class TestApiKeyHandling:
+    """Test API key handling in main()."""
+
+    def test_main_with_env_api_key(self, tmp_path: Path) -> None:
+        """Test that main() reads API key from environment."""
+        video_path = tmp_path / "test.mp4"
+        video_path.touch()
+
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test_key_from_env"}),
+            patch("sys.argv", ["vtt", str(video_path)]),
+            patch("vtt.main.handle_standard_transcription", return_value="Test transcript") as mock_transcribe,
+            patch("builtins.print"),
+        ):
+            main()
+
+            # Verify the API key was passed
+            mock_transcribe.assert_called_once()
+            call_args = mock_transcribe.call_args
+            assert call_args[0][1] == "test_key_from_env"  # api_key is second arg
+
+    def test_main_with_diarize_requires_api_key(self, tmp_path: Path) -> None:
+        """Test that main() with --diarize still requires API key for transcription."""
+        audio_file = tmp_path / "test.mp3"
+        audio_file.touch()
+
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test_key_for_diarize"}),
+            patch("sys.argv", ["vtt", str(audio_file), "--diarize", "--device", "cpu"]),
+            patch("vtt.main.handle_standard_transcription", return_value="Test transcript") as mock_transcribe,
+            patch("builtins.print"),
+        ):
+            main()
+
+            # Verify the API key was passed
+            mock_transcribe.assert_called_once()
+            call_args = mock_transcribe.call_args
+            assert call_args[0][1] == "test_key_for_diarize"  # api_key is second arg
+
+
 class TestMainCliArgumentParsing:
     """Test main function CLI argument parsing."""
 
@@ -229,7 +270,7 @@ class TestMainCliArgumentParsing:
             video_path.touch()
 
             with (
-                patch("sys.argv", ["main.py", str(video_path), "--diarize"]),
+                patch("sys.argv", ["main.py", str(video_path), "--diarize", "--no-review-speakers"]),
                 patch.object(VideoTranscriber, "transcribe", return_value="[00:00:00 - 00:00:05] Hello"),
                 patch("vtt.handlers._lazy_import_diarization") as mock_lazy_import,
                 patch("builtins.print"),
@@ -261,7 +302,7 @@ class TestMainCliArgumentParsing:
             video_path.touch()
 
             with (
-                patch("sys.argv", ["main.py", str(video_path), "--diarize", "--device", "cuda"]),
+                patch("sys.argv", ["main.py", str(video_path), "--diarize", "--device", "cuda", "--no-review-speakers"]),
                 patch.object(VideoTranscriber, "transcribe", return_value="[00:00:00 - 00:00:05] Hello"),
                 patch("vtt.handlers._lazy_import_diarization") as mock_lazy_import,
                 patch("builtins.print"),
@@ -324,7 +365,7 @@ class TestMainCliArgumentParsing:
             with (
                 patch(
                     "sys.argv",
-                    ["main.py", str(audio_path), "--apply-diarization", str(transcript_path)],
+                    ["main.py", str(audio_path), "--apply-diarization", str(transcript_path), "--no-review-speakers"],
                 ),
                 patch("vtt.handlers._lazy_import_diarization") as mock_lazy_import,
                 patch("builtins.print"),
