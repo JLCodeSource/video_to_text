@@ -12,7 +12,7 @@ Features
  - Prefer minute-aligned chunk durations for large audio files exceeding 25MB API limit
  - Transcribe audio via OpenAI's Whisper API with `verbose_json` response format
  - Speaker diarization using pyannote.audio to identify and label speakers in transcripts
- - Format transcripts into human-friendly lines: `[MM:SS - MM:SS] text` with optional speaker labels
+ - Format transcripts into human-friendly lines: `[HH:MM:SS - HH:MM:SS] text` with optional speaker labels
  - Shift chunk-local timestamps into absolute timeline when chunking
  - Keep or delete intermediate audio/chunk files based on flags
  - Interactive speaker review to rename/merge speakers after diarization
