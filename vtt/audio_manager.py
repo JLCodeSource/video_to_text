@@ -7,6 +7,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 
 # Constants
 AUDIO_EXTENSION = ".mp3"
+AUDIO_CODEC = "libmp3lame"
 
 
 class AudioFileManager:
@@ -31,7 +32,7 @@ class AudioFileManager:
                 return
 
             print(f"Extracting audio from {video_path} to {audio_path}...")
-            video_clip.audio.write_audiofile(str(audio_path), codec="libmp3lame", logger=None)
+            video_clip.audio.write_audiofile(str(audio_path), codec=AUDIO_CODEC, logger=None)
 
     @staticmethod
     def get_duration(audio_path: Path) -> float:
@@ -63,7 +64,7 @@ class AudioFileManager:
 
         with AudioFileClip(str(audio_path)) as audio_clip:
             chunk = audio_clip.subclipped(start_time, end_time)
-            chunk.write_audiofile(str(chunk_path), codec="libmp3lame", logger=None)
+            chunk.write_audiofile(str(chunk_path), codec=AUDIO_CODEC, logger=None)
 
         return chunk_path
 
