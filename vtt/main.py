@@ -72,8 +72,8 @@ def main() -> None:
             return
 
         # Standard transcription flow
-        # api_key was already obtained at line 691, no need to call get_api_key again
-        assert api_key is not None  # Should be set by line 691 for this path
+        # api_key was already obtained at line 36, no need to call get_api_key again
+        assert api_key is not None  # Should be set by line 36 for this path
         result = handle_standard_transcription(args, api_key)
         display_result(result)
 

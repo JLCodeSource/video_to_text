@@ -14,7 +14,7 @@ Examples:
   %(prog)s audio.mp3 --diarize                 # Audio with speaker identification
   %(prog)s video.mp4 --diarize -s output.txt   # Save diarized transcript
   %(prog)s audio.mp3 --diarize-only            # Only identify speakers
-  %(prog)s --apply-diarization transcript.txt audio.mp3  # Add speakers to existing transcript
+  %(prog)s audio.mp3 --apply-diarization transcript.txt  # Add speakers to existing transcript
 
 Environment Variables:
   OPENAI_API_KEY    OpenAI API key for transcription

@@ -81,7 +81,10 @@ class AudioFileManager:
             return []
 
         pattern = f"{audio_path.stem}_chunk*{AUDIO_EXTENSION}"
-        return sorted(audio_path.parent.glob(pattern))
+        return sorted(
+            audio_path.parent.glob(pattern),
+            key=lambda p: int(p.stem.split("_chunk")[1]),
+        )
 
     @staticmethod
     def cleanup_files(audio_path: Path) -> None:
