@@ -126,9 +126,9 @@ def _extract_speakers_from_transcript(transcript: str) -> list[str]:
     speakers = []
     seen = set()
     for line in transcript.split("\n"):
-        # Match pattern: [HH:MM:SS - HH:MM:SS] SPEAKER_XX: text (with colon)
-        # or [HH:MM:SS - HH:MM:SS] SPEAKER_XX (without colon, from diarization-only output)
-        match = re.match(r"\[\d{2}:\d{2}:\d{2} - \d{2}:\d{2}:\d{2}\]\s+(SPEAKER_\d+):?", line)
+        # Match pattern: [HH:MM:SS - HH:MM:SS] or [MM:SS - MM:SS] SPEAKER_XX: text (with colon)
+        # or [HH:MM:SS - HH:MM:SS] / [MM:SS - MM:SS] SPEAKER_XX (without colon, from diarization-only output)
+        match = re.match(r"\[(?:\d{2}:)?\d{2}:\d{2} - (?:\d{2}:)?\d{2}:\d{2}\]\s+(SPEAKER_\d+):?", line)
         if match:
             speaker = match.group(1)
             if speaker not in seen:
