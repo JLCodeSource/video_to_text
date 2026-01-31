@@ -182,11 +182,11 @@ class SpeakerDiarizer:
         """Apply speaker labels to timestamped transcript.
 
         Args:
-            transcript: Transcript with [MM:SS - MM:SS] text format.
+            transcript: Transcript with [HH:MM:SS - HH:MM:SS] text format.
             speaker_segments: List of (start_time, end_time, speaker_label) tuples.
 
         Returns:
-            Transcript with speaker labels: [MM:SS - MM:SS] Speaker: text
+            Transcript with speaker labels: [HH:MM:SS - HH:MM:SS] Speaker: text
         """
         if not speaker_segments:
             return transcript

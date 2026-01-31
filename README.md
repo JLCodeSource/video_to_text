@@ -12,10 +12,14 @@ Features
  - Prefer minute-aligned chunk durations for large audio files exceeding 25MB API limit
  - Transcribe audio via OpenAI's Whisper API with `verbose_json` response format
  - Speaker diarization using pyannote.audio to identify and label speakers in transcripts
- - Format transcripts into human-friendly lines: `[MM:SS - MM:SS] text` with optional speaker labels
+ - Format transcripts into human-friendly lines: `[HH:MM:SS - HH:MM:SS] text` with optional speaker labels
  - Shift chunk-local timestamps into absolute timeline when chunking
  - Keep or delete intermediate audio/chunk files based on flags
  - Interactive speaker review to rename/merge speakers after diarization
+
+## Upgrading from 0.2.0
+
+**Important:** Version 0.3.0 introduces optional dependencies for speaker diarization. If you are upgrading from 0.2.0 and want to use diarization features, you need to explicitly install the `[diarization]` extra. See the [CHANGELOG](CHANGELOG.md) for detailed upgrade instructions.
 
 Dependencies
  - Python 3.13+
@@ -158,6 +162,7 @@ Acknowledgements
 	 with help from GitHub Copilot.
 
 Files of interest
+ - [CHANGELOG.md](CHANGELOG.md) — version history and upgrade instructions
  - [main.py](main.py) — CLI entrypoint and `VideoTranscriber` implementation
  - [test_main.py](test_main.py) — main test suite (integration + unit tests)
  - [test_audio_management.py](test_audio_management.py) — audio/chunk management tests
