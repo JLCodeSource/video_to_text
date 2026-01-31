@@ -22,8 +22,8 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install dev tooling (Makefile)
-        run: make install
+      - name: Install full environment
+        run: make install-diarization
 
       - name: Lint
         run: make lint
