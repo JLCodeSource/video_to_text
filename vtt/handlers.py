@@ -57,9 +57,8 @@ def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: 
     segments = diarizer.diarize_audio(input_path)
 
     # Show GPU memory after if using CUDA
-    if torch_imported and device in ("cuda", "auto"):
-        if torch.cuda.is_available():
-            print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+    if torch_imported and device in ("cuda", "auto") and torch.cuda.is_available():
+        print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
 
     result = format_diarization_output(segments)
     display_result(result)
