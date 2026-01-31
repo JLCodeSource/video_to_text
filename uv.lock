@@ -2708,6 +2708,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "moviepy" },
     { name = "openai" },
+    { name = "python-dotenv" },
 ]
 
 [package.optional-dependencies]
@@ -2723,7 +2724,6 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "python-dotenv" },
     { name = "ruff" },
 ]
 
@@ -2732,6 +2732,7 @@ requires-dist = [
     { name = "moviepy", specifier = ">=2.2.1" },
     { name = "openai", specifier = ">=2.15.0" },
     { name = "pyannote-audio", marker = "extra == 'diarization'", specifier = ">=3.1.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "torch", marker = "extra == 'diarization'", specifier = ">=2.1.0" },
 ]
 provides-extras = ["diarization"]
@@ -2743,7 +2744,6 @@ dev = [
     { name = "pre-commit", specifier = ">=3.4.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "ruff", specifier = ">=0.14.14" },
 ]
 
