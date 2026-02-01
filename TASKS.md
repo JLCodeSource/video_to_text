@@ -72,6 +72,15 @@
 - [ ] T070_004: Monitor GitHub Actions publish job
 - [ ] T070_005: Verify package on PyPI: https://pypi.org/project/vtt-transcribe/
 
+## T075: Runtime Validation & Documentation
+- [ ] T075_000: Update all documentation for vtt-transcribe rebranding
+- [ ] T075_001: Add ffmpeg runtime validation for --diarize option
+- [ ] T075_002: Update README with new branding and installation instructions
+- [ ] T075_003: Document .env file support for environment variables
+- [ ] T075_004: Document build and publish workflows in CONTRIBUTING.md
+- [ ] T075_005: Update CONTRIBUTING.md with development setup
+- [ ] T075_006: Research and document torch/CUDA installation options
+
 ## T080: Post-Release Validation
 - [ ] T080_000: Test installation from PyPI: pip install vtt-transcribe
 - [ ] T080_001: Verify CLI works after PyPI install: vtt --help
@@ -103,3 +112,81 @@
 - Update GitHub issues as tasks are completed
 - Multi-platform testing (Linux/Mac/Windows) and multi-Python versions deferred to v0.4.0
 - All tasks assigned to @copilot
+
+## T070 - Documentation Updates
+
+### T070_000 - Update all documentation for vtt-transcribe rebranding
+**Status:** Ready
+**Priority:** High
+**Size:** 3
+**Estimate:** 2h
+**Description:** Update all .md files to reflect new package name, build system, and workflows
+
+### T070_001 - Add ffmpeg runtime validation
+**Status:** Ready
+**Priority:** High
+**Size:** 2
+**Estimate:** 30m
+**Description:** Check ffmpeg installation before diarization and provide helpful error message
+**Details:**
+- Check `ffmpeg` is in PATH when --diarize, --diarize-only, or --apply-diarization flags used
+- Provide clear installation instructions for different platforms
+- Exit gracefully with actionable error message
+
+### T070_002 - Update README.md with new package name and features
+**Status:** Ready
+**Priority:** High
+**Size:** 2
+**Estimate:** 45m
+**Details:**
+- Change video_to_text → vtt-transcribe throughout
+- Update installation: `pip install vtt-transcribe[diarization]`
+- Update command: `vtt` instead of python script
+- Add .env file support documentation
+- Add build/publish workflow documentation
+- Update all examples
+
+### T070_003 - Document .env file support
+**Status:** Ready
+**Priority:** Medium
+**Size:** 1
+**Estimate:** 15m
+**Details:**
+- Document OPENAI_API_KEY in .env
+- Document HF_TOKEN in .env
+- Document DISABLE_GPU in .env
+- Add .env.example file
+
+### T070_004 - Document build and publish workflows
+**Status:** Ready
+**Priority:** Medium
+**Size:** 2
+**Estimate:** 30m
+**Details:**
+- Document `make build`, `make build-check`
+- Document `make publish-test`, `make publish`
+- Document TestPyPI vs production PyPI
+- Document TWINE_USERNAME/TWINE_PASSWORD setup
+- Document GitHub Actions workflows
+
+### T070_005 - Update CONTRIBUTING.md
+**Status:** Ready
+**Priority:** Low
+**Size:** 1
+**Estimate:** 20m
+**Details:**
+- Update with new package name
+- Add packaging/publishing guidelines
+- Document TDD workflow with -work branches
+
+### T070_006 - Research and document torch/CUDA installation
+**Status:** Ready
+**Priority:** Medium
+**Size:** 2
+**Estimate:** 1h
+**Details:**
+- Research: Does torch automatically detect CUDA availability?
+- Research: Does pyannote.audio require special torch builds?
+- Document: Should we provide cpu-only extras group?
+- Consider: `pip install vtt-transcribe[diarization-cpu]` for CPU-only torch
+

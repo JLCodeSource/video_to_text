@@ -9,6 +9,8 @@ Timestamp Format:
 import logging
 import os
 import re
+import shutil
+import sys
 import warnings
 from pathlib import Path
 
@@ -16,6 +18,25 @@ import torch
 from pyannote.audio import Pipeline
 
 logger = logging.getLogger(__name__)
+
+
+def check_ffmpeg_installed() -> None:
+    """Check if ffmpeg is installed and available in PATH.
+
+    Raises:
+        SystemExit: If ffmpeg is not found, with installation instructions.
+    """
+    if shutil.which("ffmpeg") is None:
+        print("\nError: ffmpeg is not installed or not in PATH.", file=sys.stderr)
+        print("\nSpeaker diarization requires ffmpeg to be installed.", file=sys.stderr)
+        print("\nInstallation instructions:", file=sys.stderr)
+        print("  • Ubuntu/Debian: sudo apt-get install ffmpeg", file=sys.stderr)
+        print("  • macOS (Homebrew): brew install ffmpeg", file=sys.stderr)
+        print("  • Windows (Chocolatey): choco install ffmpeg", file=sys.stderr)
+        print("  • Windows (Scoop): scoop install ffmpeg", file=sys.stderr)
+        print("  • Or download from: https://ffmpeg.org/download.html\n", file=sys.stderr)
+        sys.exit(1)
+
 
 # Constants
 DEFAULT_DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
@@ -59,7 +80,11 @@ class SpeakerDiarizer:
 
         Raises:
             ValueError: If no token is provided and HF_TOKEN env var is not set.
+            SystemExit: If ffmpeg is not installed.
         """
+        # Check ffmpeg is available before proceeding
+        check_ffmpeg_installed()
+
         self.hf_token = hf_token or os.environ.get("HF_TOKEN")
         if not self.hf_token:
             msg = "Hugging Face token not provided. Use --hf-token or set HF_TOKEN environment variable."
