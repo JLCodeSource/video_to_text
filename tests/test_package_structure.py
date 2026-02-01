@@ -9,10 +9,10 @@ def test_vtt_transcribe_package_import() -> None:
     import vtt_transcribe
 
     assert vtt_transcribe is not None
-    version = getattr(vtt_transcribe, "__version__", None)
-    if version is not None:
-        assert isinstance(version, str)
-        assert version != ""
+    assert hasattr(vtt_transcribe, "__version__")
+    version = vtt_transcribe.__version__
+    assert isinstance(version, str)
+    assert version != ""
 
 
 def test_vtt_cli_entry_point_exists() -> None:
