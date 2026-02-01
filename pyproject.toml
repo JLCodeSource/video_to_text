@@ -1,5 +1,9 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "video-to-text"
+name = "vtt-transcribe"
 version = "0.3.0b0"
 description = "Takes a video, audio or transcript file, and where necesssary, splits the audio, transcribes and diarizes the text"
 readme = "README.md"
@@ -17,7 +21,7 @@ diarization = [
 ]
 
 [project.scripts]
-vtt = "vtt.main:main"
+vtt = "vtt_transcribe.main:main"
 
 [dependency-groups]
 dev = [
