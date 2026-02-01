@@ -40,7 +40,8 @@ def check_ffmpeg_installed() -> None:
 
 # Constants
 DEFAULT_DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
-PYANNOTE_DEFAULT_SAMPLE_RATE = 44100  # Default sample rate used by pyannote.audio v3.x
+# Default sample rate used by pyannote.audio v3.x
+PYANNOTE_DEFAULT_SAMPLE_RATE = 44100
 
 
 def resolve_device(device: str) -> str:
