@@ -1,14 +1,26 @@
 # Roadmap
 
-## Version 0.3 (current)
-Last updated: 2026-01-27T10:24:11.434Z
-- TDD Github agent skill: add workflows and tests that enable a GitHub agent to run test-driven tasks, validate patches, and report status back to PRs.
-- .devcontainer structure: include a .devcontainer with recommended VS Code settings, extensions, and a consistent dev image for contributors.
+## Version 0.3.0b1 (Released 2026-02-01)
+✅ **COMPLETED** - PyPI packaging and publication
+- Package renamed from `vtt` to `vtt-transcribe` for PyPI publication
+- Build system migrated to Hatch for modern Python packaging
+- GitHub Actions configured for automated PyPI publishing with OIDC
+- Comprehensive package structure tests added
+- FFmpeg validation for diarization features
+- Full documentation updated (README, CHANGELOG, CONTRIBUTING, USER_SETUP_GUIDE)
+- Published to PyPI: `pip install vtt-transcribe`
 
-## Features and behavior
-- ✅ Direct audio transcription: first-class support for audio-only inputs (.mp3, .ogg, .wav, .m4a). If the provided file is an individual chunk, default to processing that chunk only; provide a --scan-chunks flag to detect sibling chunk files and process them all in order when requested.
-- ✅ Speaker diarization: integrate pyannote.audio for speaker identification/diarization so transcripts can label speech segments by speaker; requires HF_TOKEN environment variable or --hf-token flag (user must have accepted pyannote model access on Hugging Face); expose a --diarize flag to enable diarization, --device flag for GPU/CPU selection, and interactive speaker review.
-- ✅ Tests and validation: comprehensive unit and integration tests covering direct-audio paths, chunk scanning/ordering, diarization toggle, and various edge cases.
+## Version 0.3.0 (Next - Stable Release)
+- Complete any remaining documentation improvements
+- Address any user feedback from 0.3.0b1
+- Final testing across platforms
+- Remove beta tag and release stable version
+
+## Features completed in 0.3.x series
+- ✅ Direct audio transcription: first-class support for audio-only inputs (.mp3, .ogg, .wav, .m4a)
+- ✅ Speaker diarization: pyannote.audio integration for speaker identification
+- ✅ Tests and validation: comprehensive unit and integration tests (207 tests, 95% coverage)
+- ✅ PyPI packaging: Published package with automated workflows
 
 ## Version 0.4 (local processing & packaging)
 Objective: add local-only Whisper processing and comprehensive packaging options for both connected and air-gapped environments.
