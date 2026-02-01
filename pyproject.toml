@@ -1,7 +1,7 @@
 [project]
 name = "video-to-text"
 version = "0.3.0b0"
-description = "Takes a video file, splits the audio and transcribes the text"
+description = "Takes a video, audio or transcript file, and where necesssary, splits the audio, transcribes and diarizes the text"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
