@@ -51,4 +51,4 @@ jobs:
         if: ${{ !inputs.dry_run || github.event_name == 'release' }}
         uses: pypa/gh-action-pypi-publish@v1
         with:
-          package_dir: dist
+          packages-dir: dist
