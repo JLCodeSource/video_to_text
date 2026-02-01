@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vtt.handlers import (
+from vtt_transcribe.handlers import (
     display_result,
     handle_apply_diarization_mode,
     handle_diarize_only_mode,
@@ -72,7 +72,7 @@ class TestHandleDiarizeOnlyMode:
         save_path = tmp_path / "output.txt"
 
         with (
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             patch("builtins.print"),
         ):
             mock_diarizer = MagicMock()
@@ -120,7 +120,7 @@ class TestHandleApplyDiarizationMode:
         save_path = tmp_path / "output.txt"
 
         with (
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             patch("builtins.print"),
         ):
             mock_diarizer = MagicMock()
@@ -146,7 +146,7 @@ class TestHandleReviewSpeakers:
     def test_handle_review_speakers_missing_inputs(self) -> None:
         """Test handle_review_speakers raises error when both input_path and transcript are None."""
         with (  # noqa: PT012
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             pytest.raises(ValueError, match="Either input_path or transcript must be provided"),
         ):
             mock_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
@@ -155,7 +155,7 @@ class TestHandleReviewSpeakers:
     def test_handle_review_speakers_with_missing_file(self) -> None:
         """Test handle_review_speakers raises error for missing input file."""
         with (  # noqa: PT012
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             pytest.raises(FileNotFoundError, match="Input file not found"),
         ):
             mock_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
@@ -167,7 +167,7 @@ class TestHandleReviewSpeakers:
         audio_file.write_text("fake audio")
 
         with (
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             patch("builtins.input", return_value=""),
             patch("builtins.print"),
         ):
@@ -193,7 +193,7 @@ class TestHandleReviewSpeakers:
         transcript_file.write_text("[00:00:00 - 00:00:05] SPEAKER_00: Hello")
 
         with (
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             patch("builtins.input", return_value=""),
             patch("builtins.print"),
         ):
@@ -220,7 +220,7 @@ class TestHandleReviewSpeakers:
         save_path = tmp_path / "output.txt"
 
         with (
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             patch("builtins.input", return_value=""),
             patch("builtins.print"),
         ):
@@ -258,7 +258,7 @@ class TestHandleStandardTranscription:
         args.diarize = False
 
         with (
-            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
             patch("builtins.print"),
         ):
             mock_transcriber = MagicMock()
@@ -287,8 +287,8 @@ class TestHandleStandardTranscription:
         args.no_review_speakers = True
 
         with (
-            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt.handlers._lazy_import_diarization") as mock_import,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
             patch("builtins.print"),
         ):
             mock_transcriber = MagicMock()
@@ -319,15 +319,15 @@ class TestNoReviewSpeakersFlag:
 
     def test_diarize_only_runs_review_by_default(self, tmp_path: Any) -> None:
         """Test that --diarize-only triggers review unless --no-review-speakers is used."""
-        from vtt.main import main
+        from vtt_transcribe.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "--diarize-only", "--hf-token", "hf_test"]),
-            patch("vtt.main.handle_diarize_only_mode") as mock_diarize_only,
-            patch("vtt.main.handle_review_speakers") as mock_review,
+            patch("vtt_transcribe.main.handle_diarize_only_mode") as mock_diarize_only,
+            patch("vtt_transcribe.main.handle_review_speakers") as mock_review,
             patch("builtins.print"),
         ):
             mock_diarize_only.return_value = "[00:00:00 - 00:00:05] SPEAKER_00"
@@ -339,15 +339,15 @@ class TestNoReviewSpeakersFlag:
 
     def test_no_review_speakers_disables_review_for_diarize_only(self, tmp_path: Any) -> None:
         """Test that --no-review-speakers prevents review in --diarize-only mode."""
-        from vtt.main import main
+        from vtt_transcribe.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "--diarize-only", "--hf-token", "hf_test", "--no-review-speakers"]),
-            patch("vtt.main.handle_diarize_only_mode") as mock_diarize_only,
-            patch("vtt.main.handle_review_speakers") as mock_review,
+            patch("vtt_transcribe.main.handle_diarize_only_mode") as mock_diarize_only,
+            patch("vtt_transcribe.main.handle_review_speakers") as mock_review,
             patch("builtins.print"),
         ):
             mock_diarize_only.return_value = "[00:00:00 - 00:00:05] SPEAKER_00"
@@ -359,7 +359,7 @@ class TestNoReviewSpeakersFlag:
 
     def test_no_review_speakers_disables_review_for_apply_diarization(self, tmp_path: Any) -> None:
         """Test that --no-review-speakers prevents review in --apply-diarization mode."""
-        from vtt.main import main
+        from vtt_transcribe.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
@@ -379,8 +379,8 @@ class TestNoReviewSpeakersFlag:
                     "--no-review-speakers",
                 ],
             ),
-            patch("vtt.main.handle_apply_diarization_mode") as mock_apply,
-            patch("vtt.main.handle_review_speakers") as mock_review,
+            patch("vtt_transcribe.main.handle_apply_diarization_mode") as mock_apply,
+            patch("vtt_transcribe.main.handle_review_speakers") as mock_review,
             patch("builtins.print"),
         ):
             mock_apply.return_value = "[00:00:00 - 00:00:05] SPEAKER_00: Hello"
@@ -392,7 +392,7 @@ class TestNoReviewSpeakersFlag:
 
     def test_no_review_speakers_disables_review_for_diarize_transcribe(self, tmp_path: Any) -> None:
         """Test that --no-review-speakers prevents review in --diarize (transcribe+diarize) mode."""
-        from vtt.main import main
+        from vtt_transcribe.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
@@ -402,7 +402,7 @@ class TestNoReviewSpeakersFlag:
                 "sys.argv",
                 ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test", "--no-review-speakers"],
             ),
-            patch("vtt.main.handle_standard_transcription") as mock_transcribe,
+            patch("vtt_transcribe.main.handle_standard_transcription") as mock_transcribe,
             patch("builtins.print"),
         ):
             mock_transcribe.return_value = "[00:00:00 - 00:00:05] SPEAKER_00: Hello"
@@ -414,16 +414,16 @@ class TestNoReviewSpeakersFlag:
 
     def test_diarize_transcribe_runs_review_by_default(self, tmp_path: Any) -> None:
         """Test that --diarize triggers review by default."""
-        from vtt.main import main
+        from vtt_transcribe.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
-            patch("vtt.handlers.handle_review_speakers") as mock_review,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.handlers.handle_review_speakers") as mock_review,
             patch("builtins.print"),
         ):
             mock_transcriber = MagicMock()
@@ -452,15 +452,15 @@ class TestNoReviewSpeakersFlag:
 
     def test_diarize_transcribe_speaker_rename_with_input(self, tmp_path: Any) -> None:
         """Test that speaker renaming works when user provides input."""
-        from vtt.main import main
+        from vtt_transcribe.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
             patch("builtins.input", return_value="Alice") as mock_input,
             patch("builtins.print") as mock_print,
         ):

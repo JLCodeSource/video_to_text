@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from vtt.main import VideoTranscriber
+from vtt_transcribe.main import VideoTranscriber
 
 
 class TestFeatureTemplate:

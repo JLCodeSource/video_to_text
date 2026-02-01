@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from vtt.transcript_formatter import TranscriptFormatter
+from vtt_transcribe.transcript_formatter import TranscriptFormatter
 
 
 class TestTranscriptFormatter:

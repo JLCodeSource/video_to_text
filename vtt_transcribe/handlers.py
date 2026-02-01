@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from vtt.diarization import SpeakerDiarizer, format_diarization_output  # noqa: F401
+    from vtt_transcribe.diarization import SpeakerDiarizer, format_diarization_output  # noqa: F401
 
 
 AUDIO_EXTENSION = ".mp3"
@@ -219,7 +219,7 @@ def handle_review_speakers(
 def _lazy_import_diarization() -> tuple:
     """Lazy import diarization module to avoid loading torch on --help."""
     try:
-        from vtt.diarization import (
+        from vtt_transcribe.diarization import (
             SpeakerDiarizer,
             format_diarization_output,
             get_speaker_context_lines,
@@ -242,7 +242,7 @@ def handle_standard_transcription(args: Any, api_key: str) -> str:
     Returns:
         The final transcript (with or without speaker labels).
     """
-    from vtt.transcriber import VideoTranscriber
+    from vtt_transcribe.transcriber import VideoTranscriber
 
     transcriber = VideoTranscriber(api_key)
 

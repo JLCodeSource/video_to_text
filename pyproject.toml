@@ -1,27 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "video-to-text"
-version = "0.3.0b0"
-description = "Takes a video, audio or transcript file, and where necesssary, splits the audio, transcribes and diarizes the text"
+name = "vtt-transcribe"
+version = "0.3.0b1"
+description = "Transcribe video and audio files to text using OpenAI Whisper with optional speaker diarization"
 readme = "README.md"
 requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "JLCodeSource", email = "justin@justinleger.ca"}
+]
+keywords = ["transcription", "whisper", "openai", "video", "audio", "speech-to-text", "diarization", "subtitles"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "moviepy>=2.2.1",
     "openai>=2.15.0",
     "python-dotenv>=1.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/JLCodeSource/vtt-transcribe"
+Repository = "https://github.com/JLCodeSource/vtt-transcribe"
+Issues = "https://github.com/JLCodeSource/vtt-transcribe/issues"
+Changelog = "https://github.com/JLCodeSource/vtt-transcribe/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 diarization = [
     "pyannote.audio>=3.1.0",
     "torch>=2.1.0",
 ]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.5.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.4.0",
+]
+build = [
+    "build>=1.0.0",
+    "twine>=4.0.0",
+    "hatchling>=1.18.0",
+]
 
 [project.scripts]
-vtt = "vtt.main:main"
+vtt = "vtt_transcribe.main:main"
 
 [dependency-groups]
 dev = [
+    "build>=1.0.0",
     "coverage>=7.13.2",
+    "hatch>=1.9.0",
     "mypy>=1.19.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
@@ -36,4 +79,15 @@ filterwarnings = [
 ]
 markers = [
     "integration: marks tests as integration tests (require external services/models)",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["vtt_transcribe"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/vtt_transcribe",
+  "/tests",
+  "/README.md",
+  "/LICENSE",
 ]

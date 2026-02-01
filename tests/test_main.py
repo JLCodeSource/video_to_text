@@ -9,8 +9,8 @@ import pytest
 if TYPE_CHECKING:
     from openai.types.audio.transcription_verbose import TranscriptionVerbose
 
-from vtt.main import main
-from vtt.transcriber import VideoTranscriber
+from vtt_transcribe.main import main
+from vtt_transcribe.transcriber import VideoTranscriber
 
 
 # Helper function for common mock setup
@@ -23,7 +23,7 @@ def create_mock_transcriber_with_response(response_text: str = "default transcri
     Returns:
         tuple: (transcriber, mock_client)
     """
-    with patch("vtt.transcriber.OpenAI") as mock_openai:
+    with patch("vtt_transcribe.transcriber.OpenAI") as mock_openai:
         mock_client = MagicMock()
         mock_openai.return_value = mock_client
         mock_client.audio.transcriptions.create.return_value = cast(
@@ -39,7 +39,7 @@ class TestMainGuard:
     def test_main_guard_execution(self) -> None:
         """Test that main() is called when module is executed directly."""
         # Test that when we import the module, __name__ check exists and works
-        from vtt import main as main_module
+        from vtt_transcribe import main as main_module
 
         # Verify the module has the expected structure
         assert hasattr(main_module, "main")
@@ -47,7 +47,7 @@ class TestMainGuard:
 
         # We can't easily test the guard without actually running as __main__
         # but we can verify it exists in the source
-        source_file = Path(__file__).parent.parent / "vtt" / "main.py"
+        source_file = Path(__file__).parent.parent / "vtt_transcribe" / "main.py"
         source_content = source_file.read_text()
         assert 'if __name__ == "__main__":' in source_content
         assert "main()" in source_content
@@ -58,7 +58,7 @@ class TestTranscribeVerboseJson:
 
     def test_transcribe_audio_file_uses_verbose_json(self, tmp_path: Path) -> None:
         """Should call Whisper API with response_format='verbose_json'."""
-        with patch("vtt.transcriber.OpenAI") as mock_openai:
+        with patch("vtt_transcribe.transcriber.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
@@ -84,7 +84,7 @@ class TestTranscribeVerboseJson:
 
     def test_transcribe_audio_file_formats_verbose_json(self, tmp_path: Path) -> None:
         """Should format verbose_json response into timestamped lines."""
-        with patch("vtt.transcriber.OpenAI") as mock_openai:
+        with patch("vtt_transcribe.transcriber.OpenAI") as mock_openai:
             mock_client = MagicMock()
             mock_openai.return_value = mock_client
             mock_client.audio.transcriptions.create.return_value = cast(
@@ -137,7 +137,7 @@ def test_debug_print_exception_while_printing_response(tmp_path: Any, capsys: An
 
 def test_format_timestamp_exception_branch() -> None:
     # Given a transcriber
-    with patch("vtt.transcriber.OpenAI"):
+    with patch("vtt_transcribe.transcriber.OpenAI"):
         transcriber = VideoTranscriber("key")
         # When calling _format_timestamp with a non-int-convertible value
         result = transcriber._format_timestamp("not-a-number")  # type: ignore[arg-type]
@@ -220,7 +220,7 @@ class TestLazyImportDiarization:
     """Test _lazy_import_diarization import fallback."""
 
     def test_lazy_import_normal_path(self) -> None:
-        """Should import from vtt.diarization normally."""
+        """Should import from vtt_transcribe.diarization normally."""
         try:
             import pyannote.audio  # noqa: F401
 
@@ -231,9 +231,9 @@ class TestLazyImportDiarization:
         if not pyannote_available:
             pytest.skip("pyannote.audio not installed")
 
-        import vtt.handlers
+        import vtt_transcribe.handlers
 
-        result = vtt.handlers._lazy_import_diarization()
+        result = vtt_transcribe.handlers._lazy_import_diarization()
 
         assert len(result) == 4
         speaker_diarizer, format_output, get_unique, get_context = result
@@ -261,7 +261,7 @@ class TestLazyImportDiarization:
         from unittest.mock import MagicMock
 
         # Save original state
-        original_module = sys.modules.get("vtt.diarization")
+        original_module = sys.modules.get("vtt_transcribe.diarization")
         original_import = builtins.__import__
 
         # Create a mock diarization module
@@ -273,12 +273,12 @@ class TestLazyImportDiarization:
 
         try:
             # Temporarily remove vtt.diarization from sys.modules
-            if "vtt.diarization" in sys.modules:
-                del sys.modules["vtt.diarization"]
+            if "vtt_transcribe.diarization" in sys.modules:
+                del sys.modules["vtt_transcribe.diarization"]
 
             # Mock the import to fail for vtt.diarization but succeed for diarization
             def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
-                if name == "vtt.diarization":
+                if name == "vtt_transcribe.diarization":
                     msg = "Simulated import failure"
                     raise ImportError(msg)
                 if name == "diarization":
@@ -288,12 +288,12 @@ class TestLazyImportDiarization:
             builtins.__import__ = mock_import
 
             # Re-import handlers to get fresh _lazy_import_diarization
-            import vtt.handlers
+            import vtt_transcribe.handlers
 
-            reload(vtt.handlers)
+            reload(vtt_transcribe.handlers)
 
             # This should use the fallback path
-            result = vtt.handlers._lazy_import_diarization()
+            result = vtt_transcribe.handlers._lazy_import_diarization()
 
             assert len(result) == 4
             # Verify we got the mock objects from the fallback import
@@ -303,10 +303,10 @@ class TestLazyImportDiarization:
             # Restore original state
             builtins.__import__ = original_import
             if original_module is not None:
-                sys.modules["vtt.diarization"] = original_module
-            import vtt.handlers
+                sys.modules["vtt_transcribe.diarization"] = original_module
+            import vtt_transcribe.handlers
 
-            reload(vtt.handlers)
+            reload(vtt_transcribe.handlers)
 
 
 class TestM4aAudioSupport:
@@ -329,9 +329,9 @@ class TestNoReviewSpeakersFlag:
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "--diarize-only", "--hf-token", "hf_test"]),
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
-            patch("vtt.main.handle_review_speakers") as mock_review,
-            patch("vtt.main.handle_diarize_only_mode") as _mock_diarize_only,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.main.handle_review_speakers") as mock_review,
+            patch("vtt_transcribe.main.handle_diarize_only_mode") as _mock_diarize_only,
             patch("builtins.print"),
         ):
             mock_diarization_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
@@ -350,9 +350,9 @@ class TestNoReviewSpeakersFlag:
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "--diarize-only", "--hf-token", "hf_test", "--no-review-speakers"]),
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
-            patch("vtt.main.handle_review_speakers") as mock_review,
-            patch("vtt.main.handle_diarize_only_mode") as _mock_diarize_only,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.main.handle_review_speakers") as mock_review,
+            patch("vtt_transcribe.main.handle_diarize_only_mode") as _mock_diarize_only,
             patch("builtins.print"),
         ):
             mock_diarization_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
@@ -384,9 +384,9 @@ class TestNoReviewSpeakersFlag:
                     "--no-review-speakers",
                 ],
             ),
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
-            patch("vtt.main.handle_review_speakers") as mock_review,
-            patch("vtt.main.handle_apply_diarization_mode") as _mock_apply,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.main.handle_review_speakers") as mock_review,
+            patch("vtt_transcribe.main.handle_apply_diarization_mode") as _mock_apply,
             patch("builtins.print"),
         ):
             mock_diarization_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
@@ -408,8 +408,8 @@ class TestNoReviewSpeakersFlag:
                 "sys.argv",
                 ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test", "--no-review-speakers"],
             ),
-            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
             patch("builtins.input") as mock_input,
             patch("builtins.print"),
         ):
@@ -442,8 +442,8 @@ class TestNoReviewSpeakersFlag:
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
             patch("builtins.input", return_value="") as mock_input,
             patch("builtins.print"),
         ):
@@ -471,15 +471,15 @@ class TestNoReviewSpeakersFlag:
         """Test that speaker renaming works when user provides input."""
         from unittest.mock import MagicMock, patch
 
-        from vtt.main import main
+        from vtt_transcribe.main import main
 
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
 
         with (
             patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt.handlers._lazy_import_diarization") as mock_diarization_import,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
             patch("builtins.input", return_value="Alice") as mock_input,
             patch("builtins.print") as mock_print,
         ):
@@ -512,14 +512,14 @@ def test_handle_review_speakers_missing_inputs() -> None:
     """Test handle_review_speakers raises error when both input_path and transcript are None."""
     import pytest
 
-    import vtt.handlers
+    import vtt_transcribe.handlers
 
     with (  # noqa: PT012
-        patch("vtt.handlers._lazy_import_diarization") as mock_import,
+        patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
         pytest.raises(ValueError, match="Either input_path or transcript must be provided"),
     ):
         mock_import.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
-        vtt.handlers.handle_review_speakers(input_path=None, transcript=None)
+        vtt_transcribe.handlers.handle_review_speakers(input_path=None, transcript=None)
 
 
 def test_cleanup_audio_files_prints_chunk_deletion(tmp_path: Path) -> None:
@@ -531,7 +531,7 @@ def test_cleanup_audio_files_prints_chunk_deletion(tmp_path: Path) -> None:
     audio_path.write_text("audio")
     chunk_path.write_text("chunk")
 
-    with patch("vtt.transcriber.OpenAI"):
+    with patch("vtt_transcribe.transcriber.OpenAI"):
         transcriber = VideoTranscriber("key")
         with patch("builtins.print") as mock_print:
             # Call cleanup which should print chunk deletions
@@ -546,14 +546,14 @@ class TestApiKeyHandling:
 
     def test_get_api_key_from_argument(self) -> None:
         """Test getting API key from command line argument."""
-        from vtt.main import get_api_key
+        from vtt_transcribe.main import get_api_key
 
         result = get_api_key("arg_key")
         assert result == "arg_key"
 
     def test_get_api_key_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test getting API key from environment variable."""
-        from vtt.main import get_api_key
+        from vtt_transcribe.main import get_api_key
 
         monkeypatch.setenv("OPENAI_API_KEY", "env_key")
         result = get_api_key(None)
@@ -561,7 +561,7 @@ class TestApiKeyHandling:
 
     def test_get_api_key_arg_takes_precedence(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that command line argument takes precedence over environment variable."""
-        from vtt.main import get_api_key
+        from vtt_transcribe.main import get_api_key
 
         monkeypatch.setenv("OPENAI_API_KEY", "env_key")
         result = get_api_key("arg_key")
@@ -569,7 +569,7 @@ class TestApiKeyHandling:
 
     def test_get_api_key_missing_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that missing API key raises ValueError."""
-        from vtt.main import get_api_key
+        from vtt_transcribe.main import get_api_key
 
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         with pytest.raises(ValueError, match="OpenAI API key not provided"):

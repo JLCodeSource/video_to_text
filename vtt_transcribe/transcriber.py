@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 
 from openai import OpenAI
 
-from vtt.audio_chunker import AudioChunker
-from vtt.audio_manager import AudioFileManager
-from vtt.transcript_formatter import TranscriptFormatter
+from vtt_transcribe.audio_chunker import AudioChunker
+from vtt_transcribe.audio_manager import AudioFileManager
+from vtt_transcribe.transcript_formatter import TranscriptFormatter
 
 if TYPE_CHECKING:
     from openai.types.audio.transcription_verbose import TranscriptionVerbose

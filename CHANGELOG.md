@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0b1] - 2026-02-01
+
+### Changed
+- **Package name**: Renamed from `vtt` to `vtt_transcribe` for PyPI publication
+  - All imports updated: `from vtt.` → `from vtt_transcribe.`
+  - CLI command remains `vtt` for ease of use
+- **Build system**: Migrated to Hatch for modern Python packaging
+  - Added `hatchling` as build backend
+  - Configured package discovery in `pyproject.toml`
+  - Added explicit Python version requirement (>=3.13)
+- **GitHub Actions**: Configured OIDC publishing workflow for PyPI
+  - Added workflow_dispatch trigger for testing
+  - Automated publishing on release creation
+- **Dependencies**: Added `hatch` and `build` to dev dependencies
+- **Testing**: Added comprehensive package structure tests
+  - Test CLI entry point
+  - Test package imports
+  - 207 tests passing with 95% coverage
+
+### Added
+- PyPI publication support with Trusted Publishers (OIDC)
+- Automated build and publish workflow
+- Package structure validation tests
+
 ## [0.3.0b0] - 2026-01-31
 
 ### Added
@@ -30,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **BREAKING**: Diarization dependencies now optional
   - `pyannote.audio` and `torch` moved to optional `[diarization]` extra
-  - Users must explicitly install with: `uv sync --extra diarization` or `pip install video-to-text[diarization]`
+  - Users must explicitly install with: `uv sync --extra diarization` or `pip install vtt-transcribe[diarization]`
   - Use `make install-diarization` instead of `make install` to include diarization support
 - **Dependency updates**: `python-dotenv` moved from dev dependencies to main dependencies
 - Version format corrected to PEP 440 compliant: `0.3.0b0` (was `0.3.0_beta0`)
@@ -49,7 +73,7 @@ If you are only using basic transcription features (no speaker identification), 
 ```bash
 uv sync
 # or
-pip install --upgrade video-to-text
+pip install --upgrade vtt-transcribe
 ```
 
 ### For users using or planning to use speaker diarization
@@ -62,7 +86,7 @@ uv sync --extra diarization
 
 **Using pip:**
 ```bash
-pip install video-to-text[diarization]
+pip install vtt-transcribe[diarization]
 ```
 
 **Using make:**

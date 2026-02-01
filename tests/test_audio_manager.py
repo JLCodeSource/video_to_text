@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from vtt.audio_manager import AudioFileManager
+from vtt_transcribe.audio_manager import AudioFileManager
 
 
 class TestAudioFileManager:
@@ -15,7 +15,7 @@ class TestAudioFileManager:
         audio_path = tmp_path / "audio.mp3"
         video_path.touch()
 
-        with patch("vtt.audio_manager.VideoFileClip") as mock_video:
+        with patch("vtt_transcribe.audio_manager.VideoFileClip") as mock_video:
             mock_instance = MagicMock()
             mock_instance.audio = MagicMock()
             mock_instance.__enter__.return_value = mock_instance
@@ -32,7 +32,7 @@ class TestAudioFileManager:
         audio_path = tmp_path / "audio.mp3"
         audio_path.touch()
 
-        with patch("vtt.audio_manager.AudioFileClip") as mock_audio:
+        with patch("vtt_transcribe.audio_manager.AudioFileClip") as mock_audio:
             mock_instance = MagicMock()
             mock_instance.duration = 120.5
             mock_instance.__enter__.return_value = mock_instance
@@ -93,7 +93,7 @@ def test_extract_from_video_skips_if_exists_and_not_force(tmp_path: Path) -> Non
     video_path.write_text("fake video")
     audio_path.write_text("existing audio")
 
-    with patch("vtt.audio_manager.VideoFileClip"):
+    with patch("vtt_transcribe.audio_manager.VideoFileClip"):
         AudioFileManager.extract_from_video(video_path, audio_path, force=False)
         # Should not have been overwritten
         assert audio_path.read_text() == "existing audio"
@@ -110,7 +110,7 @@ def test_extract_from_video_no_audio_track(tmp_path: Path) -> None:
     mock_clip.__exit__ = MagicMock(return_value=False)
     mock_clip.audio = None
 
-    with patch("vtt.audio_manager.VideoFileClip", return_value=mock_clip):
+    with patch("vtt_transcribe.audio_manager.VideoFileClip", return_value=mock_clip):
         AudioFileManager.extract_from_video(video_path, audio_path, force=True)
         # Should not create audio file
         assert not audio_path.exists()

@@ -4,8 +4,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from vtt.cli import create_parser
-from vtt.handlers import (
+from vtt_transcribe.cli import create_parser
+from vtt_transcribe.handlers import (
     display_result,
     handle_apply_diarization_mode,
     handle_diarize_only_mode,

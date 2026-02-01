@@ -20,7 +20,7 @@ def test_speaker_diarizer_can_import_pyannote() -> None:
 
 def test_speaker_diarizer_initialization_with_token() -> None:
     """Test SpeakerDiarizer can be initialized with a token."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
     assert diarizer.hf_token == "test_token"  # noqa: S105
@@ -28,7 +28,7 @@ def test_speaker_diarizer_initialization_with_token() -> None:
 
 def test_speaker_diarizer_initialization_from_env() -> None:
     """Test SpeakerDiarizer can be initialized from HF_TOKEN env var."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     os.environ["HF_TOKEN"] = "env_token"  # noqa: S105
     try:
@@ -40,7 +40,7 @@ def test_speaker_diarizer_initialization_from_env() -> None:
 
 def test_speaker_diarizer_initialization_no_token_raises_error() -> None:
     """Test SpeakerDiarizer raises error when no token provided."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     # Ensure HF_TOKEN is not set
     os.environ.pop("HF_TOKEN", None)
@@ -51,7 +51,7 @@ def test_speaker_diarizer_initialization_no_token_raises_error() -> None:
 
 def test_speaker_diarizer_initialization_with_device() -> None:
     """Test SpeakerDiarizer can be initialized with a device."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token", device="cuda")  # noqa: S106
     assert diarizer.device == "cuda"
@@ -59,7 +59,7 @@ def test_speaker_diarizer_initialization_with_device() -> None:
 
 def test_speaker_diarizer_default_device_is_auto() -> None:
     """Test SpeakerDiarizer defaults to auto device."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
     assert diarizer.device == "auto"
@@ -67,7 +67,7 @@ def test_speaker_diarizer_default_device_is_auto() -> None:
 
 def test_diarize_audio_returns_speaker_segments() -> None:
     """Test diarize_audio returns list of speaker segments."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -84,7 +84,7 @@ def test_diarize_audio_returns_speaker_segments() -> None:
     mock_pipeline = MagicMock()
     mock_pipeline.return_value = mock_diarization
 
-    with patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline):
+    with patch("vtt_transcribe.diarization.Pipeline.from_pretrained", return_value=mock_pipeline):
         audio_path = Path("/fake/audio.mp3")
         segments = diarizer.diarize_audio(audio_path)
 
@@ -94,7 +94,7 @@ def test_diarize_audio_returns_speaker_segments() -> None:
 
 def test_apply_speakers_to_transcript_adds_labels() -> None:
     """Test apply_speakers_to_transcript adds speaker labels to transcript."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -108,7 +108,7 @@ def test_apply_speakers_to_transcript_adds_labels() -> None:
 
 def test_apply_speakers_to_transcript_empty_segments() -> None:
     """Test apply_speakers_to_transcript returns transcript unchanged when no segments."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -122,7 +122,7 @@ def test_apply_speakers_to_transcript_empty_segments() -> None:
 
 def test_apply_speakers_to_transcript_no_match() -> None:
     """Test apply_speakers_to_transcript handles lines without timestamp match."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -137,7 +137,7 @@ def test_apply_speakers_to_transcript_no_match() -> None:
 
 def test_apply_speakers_to_transcript_no_speaker_found() -> None:
     """Test apply_speakers_to_transcript when no speaker matches timestamp."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -151,7 +151,7 @@ def test_apply_speakers_to_transcript_no_speaker_found() -> None:
 
 def test_find_speaker_at_time_no_match() -> None:
     """Test _find_speaker_at_time returns None when no speaker found."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -164,7 +164,7 @@ def test_find_speaker_at_time_no_match() -> None:
 
 def test_format_diarization_output() -> None:
     """Test format_diarization_output formats segments correctly."""
-    from vtt.diarization import format_diarization_output
+    from vtt_transcribe.diarization import format_diarization_output
 
     segments = [(0.0, 5.0, "SPEAKER_00"), (65.0, 125.0, "SPEAKER_01")]
 
@@ -176,7 +176,7 @@ def test_format_diarization_output() -> None:
 
 def test_diarize_audio_short_file_raises_error() -> None:
     """Test that diarizing a short audio file raises a helpful error."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -188,7 +188,7 @@ def test_diarize_audio_short_file_raises_error() -> None:
     )
 
     with (
-        patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
+        patch("vtt_transcribe.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
         pytest.raises(ValueError, match="Audio file is too short for diarization"),
     ):
         diarizer.diarize_audio(Path("/fake/short.mp3"))
@@ -196,7 +196,7 @@ def test_diarize_audio_short_file_raises_error() -> None:
 
 def test_diarize_audio_other_error_is_reraised() -> None:
     """Test that non-short-audio errors are re-raised as-is."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -205,7 +205,7 @@ def test_diarize_audio_other_error_is_reraised() -> None:
     mock_pipeline.side_effect = RuntimeError("Some other error")
 
     with (
-        patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
+        patch("vtt_transcribe.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
         pytest.raises(RuntimeError, match="Some other error"),
     ):
         diarizer.diarize_audio(Path("/fake/audio.mp3"))
@@ -218,7 +218,7 @@ def test_diarize_audio_other_error_is_reraised() -> None:
 @pytest.mark.integration
 def test_diarize_audio_integration() -> None:
     """Integration test: Run real diarization on test audio file."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     # Explicitly get HF_TOKEN to avoid env issues during test runs
     hf_token = os.environ.get("HF_TOKEN")
@@ -258,7 +258,7 @@ def test_diarize_audio_integration() -> None:
 @pytest.mark.integration
 def test_apply_speakers_to_transcript_integration() -> None:
     """Integration test: Apply real diarization to transcript."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     test_audio = Path(__file__).parent / "hello_conversation.mp3"
     hf_token = os.environ.get("HF_TOKEN")
@@ -290,7 +290,7 @@ def test_apply_speakers_to_transcript_integration() -> None:
 @pytest.mark.integration
 def test_format_diarization_output_integration() -> None:
     """Integration test: Format real diarization output."""
-    from vtt.diarization import SpeakerDiarizer, format_diarization_output
+    from vtt_transcribe.diarization import SpeakerDiarizer, format_diarization_output
 
     test_audio = Path(__file__).parent / "hello_conversation.mp3"
     assert test_audio.exists(), f"Test audio file not found: {test_audio}"
@@ -318,7 +318,7 @@ def test_format_diarization_output_integration() -> None:
 
 def test_get_unique_speakers_from_segments() -> None:
     """Test extracting unique speaker labels from segments."""
-    from vtt.diarization import get_unique_speakers
+    from vtt_transcribe.diarization import get_unique_speakers
 
     segments = [
         (0.0, 5.0, "SPEAKER_00"),
@@ -336,7 +336,7 @@ def test_get_unique_speakers_from_segments() -> None:
 
 def test_get_speaker_context_lines() -> None:
     """Test extracting context lines for a specific speaker from transcript."""
-    from vtt.diarization import get_speaker_context_lines
+    from vtt_transcribe.diarization import get_speaker_context_lines
 
     transcript = """[00:00 - 00:05] SPEAKER_00: Hello world
 [00:05 - 00:10] SPEAKER_01: This is speaker one
@@ -364,7 +364,7 @@ def test_get_speaker_context_lines() -> None:
 
 def test_diarize_audio_sample_mismatch_error() -> None:
     """Test that sample mismatch errors show helpful encoding message."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -379,7 +379,7 @@ def test_diarize_audio_sample_mismatch_error() -> None:
     )
 
     with (
-        patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
+        patch("vtt_transcribe.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
         pytest.raises(ValueError, match="Audio file sample mismatch error"),
     ):
         diarizer.diarize_audio(Path("/fake/audio.mp3"))
@@ -387,7 +387,7 @@ def test_diarize_audio_sample_mismatch_error() -> None:
 
 def test_diarize_audio_other_value_error() -> None:
     """Test that non-sample-mismatch ValueError is re-raised as-is."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
@@ -396,7 +396,7 @@ def test_diarize_audio_other_value_error() -> None:
     mock_pipeline.side_effect = ValueError("Some random ValueError")
 
     with (
-        patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
+        patch("vtt_transcribe.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
         pytest.raises(ValueError, match="Some random ValueError"),
     ):
         diarizer.diarize_audio(Path("/fake/audio.mp3"))
@@ -404,7 +404,7 @@ def test_diarize_audio_other_value_error() -> None:
 
 def test_resolve_device_auto_with_cuda_available() -> None:
     """Test device resolution: auto with CUDA available should return cuda."""
-    from vtt.diarization import resolve_device
+    from vtt_transcribe.diarization import resolve_device
 
     with patch("torch.cuda.is_available", return_value=True):
         assert resolve_device("auto") == "cuda"
@@ -412,7 +412,7 @@ def test_resolve_device_auto_with_cuda_available() -> None:
 
 def test_resolve_device_auto_without_cuda() -> None:
     """Test device resolution: auto without CUDA should return cpu."""
-    from vtt.diarization import resolve_device
+    from vtt_transcribe.diarization import resolve_device
 
     with patch("torch.cuda.is_available", return_value=False):
         assert resolve_device("auto") == "cpu"
@@ -420,21 +420,21 @@ def test_resolve_device_auto_without_cuda() -> None:
 
 def test_resolve_device_explicit_cuda() -> None:
     """Test device resolution: explicit cuda should return cuda."""
-    from vtt.diarization import resolve_device
+    from vtt_transcribe.diarization import resolve_device
 
     assert resolve_device("cuda") == "cuda"
 
 
 def test_resolve_device_explicit_cpu() -> None:
     """Test device resolution: explicit cpu should return cpu."""
-    from vtt.diarization import resolve_device
+    from vtt_transcribe.diarization import resolve_device
 
     assert resolve_device("cpu") == "cpu"
 
 
 def test_diarizer_device_move_failure_fallback() -> None:
     """Test that diarizer handles device move failures gracefully."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token", device="cuda")  # noqa: S106
 
@@ -442,8 +442,8 @@ def test_diarizer_device_move_failure_fallback() -> None:
     mock_pipeline.to.side_effect = RuntimeError("CUDA not available")
 
     with (
-        patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
-        patch("vtt.diarization.logger.warning") as mock_logger,
+        patch("vtt_transcribe.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
+        patch("vtt_transcribe.diarization.logger.warning") as mock_logger,
     ):
         pipeline = diarizer._load_pipeline()
 
@@ -461,7 +461,7 @@ def test_diarization_uses_cuda_when_available(gpu_available: bool) -> None:  # n
 
     import torch
 
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
@@ -488,7 +488,7 @@ def test_diarization_fallback_to_cpu(gpu_available: bool) -> None:  # noqa: FBT0
     if gpu_available:
         pytest.skip("GPU is available, can't test CPU fallback")
 
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
@@ -507,7 +507,7 @@ def test_diarization_fallback_to_cpu(gpu_available: bool) -> None:  # noqa: FBT0
 @pytest.mark.integration
 def test_diarization_explicit_cpu_device() -> None:
     """Integration test: Verify explicit CPU device selection works."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
@@ -522,7 +522,7 @@ def test_diarization_explicit_cpu_device() -> None:
     # Pipeline should be loaded successfully
     assert pipeline is not None
     # Device should be resolved to cpu
-    from vtt.diarization import resolve_device
+    from vtt_transcribe.diarization import resolve_device
 
     assert resolve_device(diarizer.device) == "cpu"
 
@@ -531,15 +531,15 @@ def test_load_pipeline_logs_device_info() -> None:
     """Test that loading pipeline logs device information."""
     from unittest.mock import patch
 
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token", device="cuda")  # noqa: S106
 
     mock_pipeline = MagicMock()
 
     with (
-        patch("vtt.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
-        patch("vtt.diarization.logger.info") as mock_info,
+        patch("vtt_transcribe.diarization.Pipeline.from_pretrained", return_value=mock_pipeline),
+        patch("vtt_transcribe.diarization.logger.info") as mock_info,
         patch("torch.cuda.is_available", return_value=True),
     ):
         diarizer._load_pipeline()
@@ -552,7 +552,7 @@ def test_load_pipeline_logs_device_info() -> None:
 
 def test_disable_gpu_via_env_var() -> None:
     """Test that DISABLE_GPU env var forces CPU usage."""
-    from vtt.diarization import resolve_device
+    from vtt_transcribe.diarization import resolve_device
 
     # Set env var to disable GPU
     os.environ["DISABLE_GPU"] = "1"
@@ -573,7 +573,7 @@ def test_gpu_alias_maps_to_cuda() -> None:
     """Test that 'gpu' device string maps to 'cuda'."""
     from unittest.mock import patch
 
-    from vtt.diarization import resolve_device
+    from vtt_transcribe.diarization import resolve_device
 
     with patch("torch.cuda.is_available", return_value=True):
         # 'gpu' should resolve to 'cuda' when available
@@ -582,7 +582,7 @@ def test_gpu_alias_maps_to_cuda() -> None:
 
 def test_add_speaker_label_with_hh_mm_ss_format() -> None:
     """Test adding speaker label to transcript line with HH:MM:SS timestamp format."""
-    from vtt.diarization import SpeakerDiarizer
+    from vtt_transcribe.diarization import SpeakerDiarizer
 
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 

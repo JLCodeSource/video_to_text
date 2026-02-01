@@ -73,6 +73,26 @@ Quick start
 
 1. Ensure ffmpeg is installed on your system (see Prerequisites above)
 
+## Installation
+
+### From PyPI (Recommended)
+
+```bash
+# Basic installation (transcription only)
+pip install vtt-transcribe
+
+# OR: With diarization support
+pip install vtt-transcribe[diarization]
+
+# Using uv (faster)
+uv pip install vtt-transcribe
+uv pip install vtt-transcribe[diarization]
+```
+
+### From Source
+
+1. Ensure ffmpeg is installed on your system (see Prerequisites above)
+
 2. Run the installer which installs `uv` and creates the project's virtual environment:
 
 ```bash
@@ -83,14 +103,39 @@ make install
 make install-diarization
 ```
 
-3. Set required environment variables:
+### Setup Environment Variables
 
+You can set environment variables in your shell or create a `.env` file in your project directory:
+
+**Option 1: Shell environment**
 ```bash
 export OPENAI_API_KEY="your-openai-key"
 export HF_TOKEN="your-huggingface-token"  # Only needed for --diarize
 ```
 
-3. Run the CLI (simple example):
+**Option 2: .env file (automatically loaded)**
+```bash
+# Create a .env file in your project directory
+echo 'OPENAI_API_KEY="your-openai-key"' > .env
+echo 'HF_TOKEN="your-huggingface-token"' >> .env
+
+# For publishing to PyPI (developers only)
+echo 'TWINE_USERNAME=__token__' >> .env
+echo 'TESTPYPI_API_TOKEN=your-testpypi-token' >> .env
+echo 'PYPI_API_TOKEN=your-pypi-token' >> .env
+```
+
+The tool will automatically load variables from `.env` if the file exists.
+
+**Publishing Environment Variables (Developers Only):**
+- `TWINE_USERNAME`: Should always be `__token__` for PyPI token authentication
+- `TESTPYPI_API_TOKEN`: Your TestPyPI API token
+- `PYPI_API_TOKEN`: Your PyPI API token
+- These are only needed if you're building and publishing packages using `make build`, `make publish-test`, or `make publish`
+
+## Usage
+
+### Command Line
 
 ```bash
 # Basic transcription
@@ -101,9 +146,10 @@ vtt path/to/input.mp4 --diarize
 
 # Direct audio transcription
 vtt path/to/audio.mp3 --diarize
-```
 
-Note: You can also run with `uv run python -m vtt.main` or `uv run python vtt/main.py` if preferred.
+# Using uv run (if installed from source)
+uv run vtt path/to/input.mp4
+```
 
 CLI options
 
@@ -137,6 +183,9 @@ Makefile targets
  - `make lint` — runs both `ruff` and `mypy` (alias for `ruff-check mypy`)
  - `make format` — runs the automatic ruff-format step (`ruff format .`)
  - `make clean` — remove compiled python artifacts
+ - `make build` — build distribution packages
+ - `make publish-test` — publish to TestPyPI (requires `TESTPYPI_API_TOKEN` in environment)
+ - `make publish` — publish to PyPI (requires `PYPI_API_TOKEN` in environment)
 
 Notes on linting and typing
  - `ruff` is configured in `ruff.toml`. The rule `COM812` is disabled to avoid
@@ -173,6 +222,28 @@ Files of interest
 Contributing
  - Please run `make format` and `make lint` before submitting a PR.
  - Run `make test` to ensure all tests pass locally.
+ - See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development setup and workflow.
+
+## Building and Publishing (For Maintainers)
+
+The project uses Hatch as the build system. Build artifacts can be created and tested locally:
+
+```bash
+# Install build dependencies
+make install-build
+
+# Build distribution packages (creates dist/*.whl and dist/*.tar.gz)
+make build
+
+# Test publishing to TestPyPI
+make publish-test
+
+# Production publish to PyPI (via GitHub Actions on release)
+# Tag a release: git tag v0.3.0b1 && git push origin v0.3.0b1
+# Create GitHub release (triggers automated publish workflow)
+```
+
+For complete build and publish workflow documentation, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 License
  - See the `LICENSE` file in the repository root.

@@ -1,6 +1,6 @@
 """Tests for audio_chunker module."""
 
-from vtt.audio_chunker import AudioChunker
+from vtt_transcribe.audio_chunker import AudioChunker
 
 
 class TestAudioChunker:
