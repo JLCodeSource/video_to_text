@@ -229,10 +229,7 @@ Contributing
 The project uses Hatch as the build system. Build artifacts can be created and tested locally:
 
 ```bash
-# Install build dependencies
-make install-build
-
-# Build distribution packages (creates dist/*.whl and dist/*.tar.gz)
+# Build distribution packages (installs build dependencies as needed, creates dist/*.whl and dist/*.tar.gz)
 make build
 
 # Test publishing to TestPyPI

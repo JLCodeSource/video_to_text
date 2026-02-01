@@ -167,10 +167,7 @@ We follow TDD practices:
 ### Local Build
 
 ```bash
-# Install build dependencies
-make install-build
-
-# Build distribution packages
+# Build distribution packages (installs build dependencies as needed)
 make build
 
 # Output: dist/vtt_transcribe-{version}-py3-none-any.whl
