@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **BREAKING**: Diarization dependencies now optional
   - `pyannote.audio` and `torch` moved to optional `[diarization]` extra
-  - Users must explicitly install with: `uv sync --extra diarization` or `pip install video-to-text[diarization]`
+  - Users must explicitly install with: `uv sync --extra diarization` or `pip install vtt-transcribe[diarization]`
   - Use `make install-diarization` instead of `make install` to include diarization support
 - **Dependency updates**: `python-dotenv` moved from dev dependencies to main dependencies
 - Version format corrected to PEP 440 compliant: `0.3.0b0` (was `0.3.0_beta0`)
@@ -73,7 +73,7 @@ If you are only using basic transcription features (no speaker identification), 
 ```bash
 uv sync
 # or
-pip install --upgrade video-to-text
+pip install --upgrade vtt-transcribe
 ```
 
 ### For users using or planning to use speaker diarization
@@ -86,7 +86,7 @@ uv sync --extra diarization
 
 **Using pip:**
 ```bash
-pip install video-to-text[diarization]
+pip install vtt-transcribe[diarization]
 ```
 
 **Using make:**

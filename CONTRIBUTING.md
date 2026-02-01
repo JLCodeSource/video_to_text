@@ -49,6 +49,37 @@ If not using the dev container:
    uv run pre-commit install
    ```
 
+### GPU Support for Diarization
+
+Speaker diarization can leverage CUDA GPUs for 10-100x speedup over CPU processing.
+
+**PyTorch and CUDA:**
+- The `torch>=2.1.0` dependency will install the CPU-only version by default
+- PyTorch automatically detects CUDA availability at runtime
+- If CUDA is available, PyTorch will use it; otherwise, it falls back to CPU
+- No separate installation is needed - the same torch package works for both CPU and GPU
+
+**To verify GPU support:**
+```bash
+# Check if CUDA is available
+uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+
+# Check CUDA version
+uv run python -c "import torch; print(f'CUDA version: {torch.version.cuda}')"
+```
+
+**Dev Container GPU Support:**
+- The `.devcontainer` is configured for GPU passthrough
+- Requires NVIDIA GPU + drivers on host
+- Requires `nvidia-container-toolkit` on host
+- GPU is automatically used when available
+
+**Manual GPU Setup:**
+- Ensure NVIDIA GPU drivers are installed
+- For Docker/containers: Install `nvidia-container-toolkit`
+- The application uses `--device auto` by default (auto-detects CUDA)
+- Override with `--device cuda` or `--device cpu` if needed
+
 ## Development Workflow
 
 ### Running Tests
