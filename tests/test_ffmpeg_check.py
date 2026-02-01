@@ -9,9 +9,10 @@ from vtt_transcribe.diarization import SpeakerDiarizer, check_ffmpeg_installed
 
 def test_check_ffmpeg_installed_when_available() -> None:
     """Test check_ffmpeg_installed() passes when ffmpeg is available."""
-    # Assume ffmpeg is installed in test environment
-    # This should not raise
-    check_ffmpeg_installed()
+    # Simulate ffmpeg being installed by mocking shutil.which to return a path
+    with patch("vtt_transcribe.diarization.shutil.which", return_value="/usr/bin/ffmpeg"):
+        # This should not raise
+        check_ffmpeg_installed()
 
 
 def test_check_ffmpeg_installed_when_missing() -> None:
