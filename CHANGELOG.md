@@ -78,7 +78,7 @@ The diarization dependencies (torch + pyannote.audio) are quite large (~2-4GB) a
 - Allows users to choose whether they need GPU support (torch with CUDA)
 - Provides flexibility for different deployment scenarios (cloud vs local, CPU vs GPU)
 
-## [0.2.0] - 2024-XX-XX
+## [0.2.0] - 2026-01-25
 
 Initial stable release with core transcription functionality.
 
