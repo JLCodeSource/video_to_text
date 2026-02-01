@@ -51,7 +51,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           body: ${{ steps.tag_message.outputs.message }}
-          draft: ${{ contains(github.ref_name, 'beta') }}
-          prerelease: false
+          draft: ${{ contains(github.ref_name, 'b') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
+          prerelease: ${{ contains(github.ref_name, 'b') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
+          generate_release_notes: true
 
       # Asset upload steps removed per request.
