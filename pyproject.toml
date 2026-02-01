@@ -7,7 +7,7 @@ name = "vtt-transcribe"
 version = "0.3.0b0"
 description = "Takes a video, audio or transcript file, and where necesssary, splits the audio, transcribes and diarizes the text"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "moviepy>=2.2.1",
     "openai>=2.15.0",
@@ -25,7 +25,9 @@ vtt = "vtt_transcribe.main:main"
 
 [dependency-groups]
 dev = [
+    "build>=1.0.0",
     "coverage>=7.13.2",
+    "hatch>=1.9.0",
     "mypy>=1.19.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
