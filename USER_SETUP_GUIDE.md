@@ -167,23 +167,47 @@ Once setup is complete, we can test with TestPyPI:
 gh workflow run publish.yml --ref packaging/v0.3.0b1 -f dry-run=true
 ```
 
-### Option 2: Test publish to TestPyPI
-```bash
-# Create a test tag
-git tag v0.3.0b1-test
-git push origin v0.3.0b1-test
+### Option 2: Test publish to TestPyPI locally
 
-# Modify workflow temporarily to point to TestPyPI
-# Create a test release in GitHub
-# Monitor Actions workflow
+**Setup TestPyPI API Token:**
+1. Go to: https://test.pypi.org/manage/account/token/
+2. Click "Add API token"
+3. Name: `vtt-transcribe-local-testing`
+4. Scope: `Project: vtt-transcribe` (or "Entire account" for first publish)
+5. Click "Add token"
+6. **Copy the token immediately** (shown only once)
+
+**Configure credentials in .env:**
+```bash
+# Add to your .env file (automatically loaded)
+echo 'TWINE_USERNAME="__token__"' >> .env
+echo 'TWINE_PASSWORD="pypi-your-testpypi-token-here"' >> .env
+echo 'TWINE_REPOSITORY="testpypi"' >> .env
+
+# Verify (optional)
+source .env
+echo $TWINE_USERNAME
+```
+
+**Build and publish:**
+```bash
+# Build distribution packages
+make build
+
+# Publish to TestPyPI (credentials loaded from .env automatically)
+make publish-test
+
+# OR: Manual twine upload with credentials from .env
+source .env
+uv run twine upload --repository testpypi dist/*
 ```
 
 **If successful**: Package appears at https://test.pypi.org/project/vtt-transcribe/
 
 ### Test Installation from TestPyPI (T060_004)
 ```bash
-# Install from TestPyPI
-pip install --index-url https://test.pypi.org/simple/ vtt-transcribe
+# Install from TestPyPI (requires both indexes for dependencies)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ vtt-transcribe
 
 # Test CLI
 vtt --help
@@ -192,6 +216,8 @@ vtt --version
 # Verify import
 python -c "import vtt_transcribe; print('Success!')"
 ```
+
+**Note on .env file:** The tool automatically loads `.env` if present, so TestPyPI credentials (TWINE_*) don't need to be exported manually - they'll be available when running `make publish-test`.
 
 ---
 

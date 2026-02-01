@@ -177,9 +177,13 @@ make build
 Before publishing to production PyPI, test with TestPyPI:
 
 ```bash
-# Set TestPyPI credentials in .env
+# Set TestPyPI credentials in .env (automatically loaded by make targets)
 echo 'TWINE_USERNAME="__token__"' >> .env
 echo 'TWINE_PASSWORD="your-testpypi-token"' >> .env
+echo 'TWINE_REPOSITORY="testpypi"' >> .env
+
+# Source environment to verify
+source .env
 
 # Upload to TestPyPI
 make publish-test
@@ -187,6 +191,8 @@ make publish-test
 # Test installation from TestPyPI
 pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ vtt-transcribe
 ```
+
+**Note:** The `.env` file will be automatically loaded by Python's `dotenv`, so credentials are available to `twine` without manual export.
 
 ### Production Publishing
 
@@ -246,7 +252,6 @@ vtt-transcribe/
 ├── .devcontainer/           # Dev container configuration
 ├── pyproject.toml           # Package metadata and dependencies
 ├── Makefile                 # Development commands
-├── TASKS.md                 # Project task tracking
 └── CONTRIBUTING.md          # This file
 ```
 

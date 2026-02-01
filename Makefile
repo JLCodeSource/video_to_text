@@ -79,7 +79,7 @@ build-check: build
 # Publish to TestPyPI (for testing)
 publish-test: build-check
 	@echo "Publishing to TestPyPI..."
-	@uv run twine upload --repository testpypi dist/*
+	@TWINE_USERNAME=__token__ TWINE_PASSWORD=$${TESTPYPI_API_TOKEN} uv run twine upload --repository testpypi dist/*
 	@echo "Published to TestPyPI! View at: https://test.pypi.org/project/vtt-transcribe/"
 	@echo "Install with: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ vtt-transcribe"
 
@@ -88,6 +88,6 @@ publish: build-check
 	@echo "⚠️  WARNING: Publishing to production PyPI!"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read dummy
-	@uv run twine upload dist/*
+	@TWINE_USERNAME=__token__ TWINE_PASSWORD=$${PYPI_API_TOKEN} uv run twine upload dist/*
 	@echo "Published to PyPI! View at: https://pypi.org/project/vtt-transcribe/"
 	@echo "Install with: pip install vtt-transcribe"
