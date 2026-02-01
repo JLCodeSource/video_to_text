@@ -1,0 +1,23 @@
+name: Publish to PyPI (OIDC)
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    if: ${{ github.event.release.draft == false }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build distributions
+        run: uv run python -m build --sdist --wheel
+      - name: Publish to PyPI via OIDC
+        uses: pypa/gh-action-pypi-publish@v1
+        with:
+          package_dir: dist
