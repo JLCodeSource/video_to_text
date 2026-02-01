@@ -105,10 +105,22 @@ make install-diarization
 
 ### Setup Environment Variables
 
+You can set environment variables in your shell or create a `.env` file in your project directory:
+
+**Option 1: Shell environment**
 ```bash
 export OPENAI_API_KEY="your-openai-key"
 export HF_TOKEN="your-huggingface-token"  # Only needed for --diarize
 ```
+
+**Option 2: .env file (automatically loaded)**
+```bash
+# Create a .env file in your project directory
+echo 'OPENAI_API_KEY="your-openai-key"' > .env
+echo 'HF_TOKEN="your-huggingface-token"' >> .env
+```
+
+The tool will automatically load variables from `.env` if the file exists.
 
 ## Usage
 
@@ -196,6 +208,28 @@ Files of interest
 Contributing
  - Please run `make format` and `make lint` before submitting a PR.
  - Run `make test` to ensure all tests pass locally.
+ - See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development setup and workflow.
+
+## Building and Publishing (For Maintainers)
+
+The project uses Hatch as the build system. Build artifacts can be created and tested locally:
+
+```bash
+# Install build dependencies
+make install-build
+
+# Build distribution packages (creates dist/*.whl and dist/*.tar.gz)
+make build
+
+# Test publishing to TestPyPI
+make publish-test
+
+# Production publish to PyPI (via GitHub Actions on release)
+# Tag a release: git tag v0.3.0b1 && git push origin v0.3.0b1
+# Create GitHub release (triggers automated publish workflow)
+```
+
+For complete build and publish workflow documentation, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 License
  - See the `LICENSE` file in the repository root.
