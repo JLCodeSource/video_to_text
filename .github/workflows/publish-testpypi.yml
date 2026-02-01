@@ -1,6 +1,9 @@
 name: Publish to TestPyPI (OIDC)
 
 on:
+  push:
+    tags:
+      - 'v*b*'
   workflow_dispatch:
     inputs:
       dry_run:
