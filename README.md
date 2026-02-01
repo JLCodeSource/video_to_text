@@ -183,9 +183,9 @@ Makefile targets
  - `make lint` — runs both `ruff` and `mypy` (alias for `ruff-check mypy`)
  - `make format` — runs the automatic ruff-format step (`ruff format .`)
  - `make clean` — remove compiled python artifacts
- - `make build` — build distribution packages (requires TWINE credentials in environment)
- - `make publish-test` — publish to TestPyPI (requires TWINE_TEST_USERNAME and TWINE_TEST_PASSWORD)
- - `make publish` — publish to PyPI (requires TWINE_USERNAME and TWINE_PASSWORD)
+ - `make build` — build distribution packages
+ - `make publish-test` — publish to TestPyPI (requires `TESTPYPI_API_TOKEN` in environment)
+ - `make publish` — publish to PyPI (requires `PYPI_API_TOKEN` in environment)
 
 Notes on linting and typing
  - `ruff` is configured in `ruff.toml`. The rule `COM812` is disabled to avoid
