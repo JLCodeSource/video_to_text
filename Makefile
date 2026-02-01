@@ -2,12 +2,13 @@
 PYTHON ?= python
 PIP ?= pip
 
-.PHONY: help install install-diarization test test-integration lint ruff-check ruff-fix mypy format clean build build-check publish-test publish
+.PHONY: help install install-diarization install-build test test-integration lint ruff-check ruff-fix mypy format clean build build-check publish-test publish
 
 help:
 	@echo "Available targets:"
 	@echo "  install                - Install uv and sync basic environment (no diarization)"
 	@echo "  install-diarization    - Install with diarization support (includes pyannote.audio + torch)"
+	@echo "  install-build          - Install build dependencies (build + twine)"
 	@echo "  test                   - Run all tests with coverage"
 	@echo "  test-integration       - Run only integration tests"
 	@echo "  lint                   - Run ruff and mypy checks"
@@ -36,6 +37,12 @@ install-diarization:
 	uv venv --clear && \
 	uv sync --extra diarization && \
 	uv run pre-commit install
+
+# Install build dependencies only (build system tools)
+install-build:
+	@echo "Installing build dependencies..."
+	@uv sync --extra build
+	@echo "Build dependencies installed successfully!"
 
 # Use `uv run` for all runtime targets so commands run inside the project's environment
 test:
