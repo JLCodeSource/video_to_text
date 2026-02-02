@@ -264,8 +264,7 @@ def _lazy_import_diarization() -> tuple:
                     # Original was plain ImportError - this is likely a real bug
                     # Explicitly raise the original exception to preserve its traceback
                     # and chain the fallback failure as the cause
-                    original_exception.__cause__ = e2
-                    raise original_exception from None
+                    raise original_exception from e2
                 # Original was missing package module, fallback failed too
                 raise ImportError(DIARIZATION_DEPS_ERROR_MSG) from e2
         elif is_missing_dependency:
