@@ -103,6 +103,10 @@ make install
 make install-diarization
 ```
 
+## Upgrading from 0.2.0
+
+**Important:** Version 0.3.0 introduces optional dependencies for speaker diarization. If you are upgrading from 0.2.0 and want to use diarization features, you need to explicitly install the `[diarization]` extra. See the [CHANGELOG](CHANGELOG.md) for detailed upgrade instructions.
+
 ### Setup Environment Variables
 
 You can set environment variables in your shell or create a `.env` file in your project directory:
