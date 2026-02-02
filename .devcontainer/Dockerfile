@@ -8,6 +8,7 @@ ARG USER_GID=$USER_UID
 # and give them sudo powers
 # Install ffmpeg (required for pyannote.audio torchcodec backend)
 # Install GitHub CLI for task management
+# Install beads CLI for issue tracking
 RUN if getent passwd ubuntu; then \
     usermod -l vscode ubuntu && \
     groupmod -n vscode ubuntu && \
