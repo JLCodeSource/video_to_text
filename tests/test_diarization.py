@@ -10,6 +10,99 @@ import pytest
 pytestmark = pytest.mark.filterwarnings("ignore::UserWarning:pyannote.audio.core.io")
 
 
+class TestDiarizationImportHandling:
+    """Test handling of missing diarization dependencies (mocked imports)."""
+
+    def test_diarize_flag_without_dependencies_shows_error(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+        """Should show error when --diarize is used without diarization dependencies."""
+        from vtt_transcribe.main import main
+
+        # Create a dummy audio file
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("dummy audio")
+
+        # Mock the transcription to succeed so we can test diarization import failure
+        # Simulate missing torch dependency (the actual scenario when optional deps not installed)
+        def mock_lazy_import() -> None:
+            msg = (
+                "Diarization dependencies not installed. "
+                "Install with: pip install vtt-transcribe[diarization] "
+                "or: uv pip install vtt-transcribe[diarization]"
+            )
+            raise ImportError(msg)
+
+        with (
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber,
+            patch("vtt_transcribe.handlers._lazy_import_diarization", side_effect=mock_lazy_import),
+            patch("sys.argv", ["vtt", str(audio_file), "--diarize"]),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
+        ):
+            # Mock transcription to return a dummy transcript
+            mock_transcriber.return_value.transcribe.return_value = "dummy transcript"
+
+            # Should exit with error
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 1
+
+        # Capture output to check error message (errors print to stdout, not stderr)
+        captured = capsys.readouterr()
+        assert "Diarization dependencies not installed" in captured.out
+
+    def test_diarize_only_without_dependencies_shows_error(self, tmp_path: Path) -> None:
+        """Should show error when --diarize-only is used without diarization dependencies."""
+        from vtt_transcribe.main import main
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("dummy audio")
+
+        # Simulate missing pyannote.audio dependency (the actual scenario)
+        def mock_lazy_import() -> None:
+            msg = (
+                "Diarization dependencies not installed. "
+                "Install with: pip install vtt-transcribe[diarization] "
+                "or: uv pip install vtt-transcribe[diarization]"
+            )
+            raise ImportError(msg)
+
+        with (
+            patch("vtt_transcribe.handlers._lazy_import_diarization", side_effect=mock_lazy_import),
+            patch("sys.argv", ["vtt", str(audio_file), "--diarize-only"]),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+
+    def test_apply_diarization_without_dependencies_shows_error(self, tmp_path: Path) -> None:
+        """Should show error when --apply-diarization is used without diarization dependencies."""
+        from vtt_transcribe.main import main
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_text("dummy audio")
+        transcript_file = tmp_path / "transcript.txt"
+        transcript_file.write_text("dummy transcript")
+
+        # Simulate missing torch dependency (the actual scenario)
+        def mock_lazy_import() -> None:
+            msg = (
+                "Diarization dependencies not installed. "
+                "Install with: pip install vtt-transcribe[diarization] "
+                "or: uv pip install vtt-transcribe[diarization]"
+            )
+            raise ImportError(msg)
+
+        with (
+            patch("vtt_transcribe.handlers._lazy_import_diarization", side_effect=mock_lazy_import),
+            patch("sys.argv", ["vtt", str(audio_file), "--apply-diarization", str(transcript_file)]),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+
+
 def test_speaker_diarizer_can_import_pyannote() -> None:
     """Test that pyannote.audio can be imported."""
     try:

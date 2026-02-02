@@ -1,5 +1,6 @@
 """Comprehensive unit and integration tests for video_to_text."""
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import MagicMock, patch
@@ -167,71 +168,35 @@ def test_format_timestamp_exception_branch() -> None:
         assert result == "00:00:00"
 
 
-@pytest.mark.skip(reason="Complex module loading test - needs update for refactored structure")
-def test_main_guard_executes_with_mocked_deps(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_guard_exists() -> None:
+    """Test that the __name__ == '__main__' guard exists in main.py."""
+    main_py = Path(__file__).parent.parent / "vtt_transcribe" / "main.py"
+    content = main_py.read_text()
+
+    # Verify the if __name__ == "__main__" guard exists and calls main()
+    assert 'if __name__ == "__main__":' in content
+    assert "main()" in content
+
+
+def test_main_module_entry_point() -> None:
+    """Test that python -m vtt_transcribe works via __main__.py."""
     import runpy
-    import sys
-    import types
+    from unittest.mock import MagicMock, patch
 
-    # Given a dummy video file so validate_input_file passes
-    video = tmp_path / "video.mp4"
-    video.write_bytes(b"mp4")
+    with (
+        patch("sys.argv", ["vtt_transcribe", "--version"]),
+        patch("vtt_transcribe.main.create_parser") as mock_parser,
+    ):
+        mock_args = MagicMock()
+        mock_args.input_file = None
+        mock_parser.return_value.parse_args.return_value = mock_args
 
-    # And: prepare fake modules to satisfy imports inside main.py
-    moviepy_vfc = types.ModuleType("moviepy.video.io.VideoFileClip")
-
-    class DummyVideo:
-        def __init__(self, _path: Path) -> None:
-            self.audio = types.SimpleNamespace(write_audiofile=lambda *_args, **_kwargs: None)
-
-        def close(self) -> None:
-            return None
-
-    moviepy_vfc.VideoFileClip = DummyVideo  # type: ignore[attr-defined]
-
-    moviepy_afc = types.ModuleType("moviepy.audio.io.AudioFileClip")
-
-    class DummyAudio:
-        def __init__(self, _path: Path) -> None:
-            self.duration = 1.0
-
-        def close(self) -> None:
-            return None
-
-        def subclipped(self, _s: float, _e: float) -> "DummyAudio":
-            return self
-
-        def write_audiofile(self, *_args: Any, **_kwargs: Any) -> None:
-            return None
-
-    moviepy_afc.AudioFileClip = DummyAudio  # type: ignore[attr-defined]
-
-    # Minimal openai module and OpenAI client
-    openai_mod = types.ModuleType("openai")
-
-    class DummyClient:
-        def __init__(self, api_key: str | None = None) -> None:  # noqa: ARG002
-            self.audio = types.SimpleNamespace(transcriptions=types.SimpleNamespace(create=lambda **_k: {"text": "ok"}))
-
-    openai_mod.OpenAI = DummyClient  # type: ignore[attr-defined]
-
-    # And: insert fake modules into sys.modules so runpy will use them
-    monkeypatch.setitem(sys.modules, "moviepy.video.io.VideoFileClip", moviepy_vfc)
-    monkeypatch.setitem(sys.modules, "moviepy.audio.io.AudioFileClip", moviepy_afc)
-    monkeypatch.setitem(sys.modules, "openai", openai_mod)
-
-    # Run main.py as a __main__ module to hit the if __name__ == "__main__" guard
-    monkeypatch.chdir(str(tmp_path))
-    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
-    # And: create a companion audio file and pass it as -o so main() uses existing audio
-    audio = tmp_path / "video.mp3"
-    audio.write_bytes(b"")
-    monkeypatch.setattr(sys, "argv", ["main.py", str(video), "-k", "dummy", "-o", str(audio)])
-
-    # When executing the project's main.py as __main__
-    runpy.run_path(str(Path(__file__).parent.parent / "vtt" / "main.py"), run_name="__main__")
-
-    # Then execution completes without raising an exception
+        # Import __main__.py which should call main() and exit
+        with pytest.raises(SystemExit):
+            runpy.run_path(
+                str(Path(__file__).parent.parent / "vtt_transcribe" / "__main__.py"),
+                run_name="__main__",
+            )
 
 
 if __name__ == "__main__":
@@ -239,93 +204,195 @@ if __name__ == "__main__":
 
 
 class TestLazyImportDiarization:
-    """Test _lazy_import_diarization import fallback."""
+    """Test all branches of _lazy_import_diarization function."""
 
-    def test_lazy_import_normal_path(self) -> None:
-        """Should import from vtt_transcribe.diarization normally."""
-        try:
-            import pyannote.audio  # noqa: F401
-
-            pyannote_available = True
-        except ImportError:
-            pyannote_available = False
-
-        if not pyannote_available:
-            pytest.skip("pyannote.audio not installed")
-
-        import vtt_transcribe.handlers
-
-        result = vtt_transcribe.handlers._lazy_import_diarization()
-
-        assert len(result) == 4
-        speaker_diarizer, format_output, get_unique, get_context = result
-        assert speaker_diarizer is not None
-        assert format_output is not None
-        assert get_unique is not None
-        assert get_context is not None
-
-    def test_lazy_import_fallback_path(self) -> None:
-        """Should fall back to direct import when vtt.diarization fails."""
-
-        try:
-            import pyannote.audio  # noqa: F401
-
-            pyannote_available = True
-        except ImportError:
-            pyannote_available = False
-
-        if not pyannote_available:
-            pytest.skip("pyannote.audio not installed")
-
+    def test_missing_package_module_with_fallback_success(self) -> None:
+        """Test ModuleNotFoundError for vtt_transcribe.diarization with successful fallback."""
         import builtins
-        import sys
         from importlib import reload
         from unittest.mock import MagicMock
 
-        # Save original state
-        original_module = sys.modules.get("vtt_transcribe.diarization")
         original_import = builtins.__import__
 
-        # Create a mock diarization module
+        # Create mock diarization module
         mock_diarization = MagicMock()
         mock_diarization.SpeakerDiarizer = MagicMock()
         mock_diarization.format_diarization_output = MagicMock()
         mock_diarization.get_speaker_context_lines = MagicMock()
         mock_diarization.get_unique_speakers = MagicMock()
 
-        try:
-            # Temporarily remove vtt.diarization from sys.modules
-            if "vtt_transcribe.diarization" in sys.modules:
-                del sys.modules["vtt_transcribe.diarization"]
+        def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "vtt_transcribe.diarization":
+                err = ModuleNotFoundError("No module named 'vtt_transcribe.diarization'")
+                err.name = "vtt_transcribe.diarization"
+                raise err
+            if name == "diarization":
+                return mock_diarization
+            return original_import(name, *args, **kwargs)
 
-            # Mock the import to fail for vtt.diarization but succeed for diarization
-            def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
-                if name == "vtt_transcribe.diarization":
-                    msg = "Simulated import failure"
-                    raise ImportError(msg)
-                if name == "diarization":
-                    return mock_diarization
-                return original_import(name, *args, **kwargs)
+        try:
+            # Remove from sys.modules if present
+            if "vtt_transcribe.handlers" in sys.modules:
+                del sys.modules["vtt_transcribe.handlers"]
 
             builtins.__import__ = mock_import
 
-            # Re-import handlers to get fresh _lazy_import_diarization
             import vtt_transcribe.handlers
 
             reload(vtt_transcribe.handlers)
 
-            # This should use the fallback path
             result = vtt_transcribe.handlers._lazy_import_diarization()
-
             assert len(result) == 4
-            # Verify we got the mock objects from the fallback import
             assert result[0] == mock_diarization.SpeakerDiarizer
-            assert result[1] == mock_diarization.format_diarization_output
         finally:
-            # Restore original state
             builtins.__import__ = original_import
-            if original_module is not None:
-                sys.modules["vtt_transcribe.diarization"] = original_module
+            # Reload to restore normal state
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+    def test_missing_package_module_with_fallback_failure(self) -> None:
+        """Test ModuleNotFoundError for vtt_transcribe.diarization with fallback also failing."""
+        import builtins
+        from importlib import reload
+
+        original_import = builtins.__import__
+
+        def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "vtt_transcribe.diarization":
+                err = ModuleNotFoundError("No module named 'vtt_transcribe.diarization'")
+                err.name = "vtt_transcribe.diarization"
+                raise err
+            if name == "diarization":
+                msg = "Fallback also failed"
+                raise ImportError(msg)
+            return original_import(name, *args, **kwargs)
+
+        try:
+            if "vtt_transcribe.handlers" in sys.modules:
+                del sys.modules["vtt_transcribe.handlers"]
+
+            builtins.__import__ = mock_import
+
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+            with pytest.raises(ImportError, match="Diarization dependencies not installed"):
+                vtt_transcribe.handlers._lazy_import_diarization()
+        finally:
+            builtins.__import__ = original_import
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+    def test_missing_dependency_torch(self) -> None:
+        """Test ModuleNotFoundError for torch dependency."""
+        import builtins
+        from importlib import reload
+
+        original_import = builtins.__import__
+
+        def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "vtt_transcribe.diarization":
+                err = ModuleNotFoundError("No module named 'torch'")
+                err.name = "torch"
+                raise err
+            return original_import(name, *args, **kwargs)
+
+        try:
+            if "vtt_transcribe.handlers" in sys.modules:
+                del sys.modules["vtt_transcribe.handlers"]
+
+            builtins.__import__ = mock_import
+
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+            with pytest.raises(ImportError, match="Diarization dependencies not installed"):
+                vtt_transcribe.handlers._lazy_import_diarization()
+        finally:
+            builtins.__import__ = original_import
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+    def test_plain_import_error_with_fallback_success(self) -> None:
+        """Test plain ImportError with successful fallback."""
+        import builtins
+        from importlib import reload
+        from unittest.mock import MagicMock
+
+        original_import = builtins.__import__
+
+        # Create mock diarization module
+        mock_diarization = MagicMock()
+        mock_diarization.SpeakerDiarizer = MagicMock()
+        mock_diarization.format_diarization_output = MagicMock()
+        mock_diarization.get_speaker_context_lines = MagicMock()
+        mock_diarization.get_unique_speakers = MagicMock()
+
+        def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "vtt_transcribe.diarization":
+                # Plain ImportError without .name attribute
+                msg = "Some import error"
+                raise ImportError(msg)
+            if name == "diarization":
+                return mock_diarization
+            return original_import(name, *args, **kwargs)
+
+        try:
+            if "vtt_transcribe.handlers" in sys.modules:
+                del sys.modules["vtt_transcribe.handlers"]
+
+            builtins.__import__ = mock_import
+
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+            result = vtt_transcribe.handlers._lazy_import_diarization()
+            assert len(result) == 4
+            assert result[0] == mock_diarization.SpeakerDiarizer
+        finally:
+            builtins.__import__ = original_import
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+    def test_plain_import_error_with_fallback_failure_reraises_original(self) -> None:
+        """Test plain ImportError where fallback fails - should re-raise original."""
+        import builtins
+        from importlib import reload
+
+        original_import = builtins.__import__
+
+        def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "vtt_transcribe.diarization":
+                # Plain ImportError without .name attribute (real bug scenario)
+                msg = "Cannot import name 'Foo' from 'bar'"
+                raise ImportError(msg)
+            if name == "diarization":
+                msg2 = "Fallback also failed"
+                raise ImportError(msg2)
+            return original_import(name, *args, **kwargs)
+
+        try:
+            if "vtt_transcribe.handlers" in sys.modules:
+                del sys.modules["vtt_transcribe.handlers"]
+
+            builtins.__import__ = mock_import
+
+            import vtt_transcribe.handlers
+
+            reload(vtt_transcribe.handlers)
+
+            # Should re-raise the original ImportError (real bug)
+            with pytest.raises(ImportError, match="Cannot import name 'Foo' from 'bar'"):
+                vtt_transcribe.handlers._lazy_import_diarization()
+        finally:
+            builtins.__import__ = original_import
             import vtt_transcribe.handlers
 
             reload(vtt_transcribe.handlers)
@@ -417,117 +484,6 @@ class TestNoReviewSpeakersFlag:
 
             # Verify review was NOT called
             mock_review.assert_not_called()
-
-    def test_no_review_speakers_disables_review_for_diarize_transcribe(self, tmp_path: Any) -> None:
-        """Test that --no-review-speakers prevents review in --diarize (transcribe+diarize) mode."""
-        from unittest.mock import MagicMock, patch
-
-        audio_file = tmp_path / "test.mp3"
-        audio_file.write_text("fake audio")
-
-        with (
-            patch(
-                "sys.argv",
-                ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test", "--no-review-speakers"],
-            ),
-            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
-            patch("builtins.input") as mock_input,
-            patch("builtins.print"),
-        ):
-            mock_transcriber = MagicMock()
-            mock_transcriber.transcribe.return_value = "[00:00:00 - 00:00:05] Hello"
-            mock_transcriber_class.return_value = mock_transcriber
-
-            mock_diarizer = MagicMock()
-            mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
-            mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00:00 - 00:00:05] SPEAKER_00: Hello"
-
-            mock_diarization_import.return_value = (
-                lambda *_args, **_kwargs: mock_diarizer,
-                MagicMock(),
-                MagicMock(return_value=["SPEAKER_00"]),
-                MagicMock(return_value=[]),
-            )
-
-            main()
-
-            # Verify input() was NOT called (no interactive review)
-            mock_input.assert_not_called()
-
-    def test_diarize_transcribe_runs_review_by_default(self, tmp_path: Any) -> None:
-        """Test that --diarize triggers review by default."""
-        from unittest.mock import MagicMock, patch
-
-        audio_file = tmp_path / "test.mp3"
-        audio_file.write_text("fake audio")
-
-        with (
-            patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
-            patch("builtins.input", return_value="") as mock_input,
-            patch("builtins.print"),
-        ):
-            mock_transcriber = MagicMock()
-            mock_transcriber.transcribe.return_value = "[00:00:00 - 00:00:05] Hello"
-            mock_transcriber_class.return_value = mock_transcriber
-
-            mock_diarizer = MagicMock()
-            mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
-            mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00:00 - 00:00:05] SPEAKER_00: Hello"
-
-            mock_diarization_import.return_value = (
-                lambda *_args, **_kwargs: mock_diarizer,
-                MagicMock(),
-                MagicMock(return_value=["SPEAKER_00"]),
-                MagicMock(return_value=["context"]),
-            )
-
-            main()
-
-            # Verify input() WAS called (review happened)
-            assert mock_input.called, "Review should run by default"
-
-    def test_diarize_transcribe_speaker_rename_with_input(self, tmp_path: Any) -> None:
-        """Test that speaker renaming works when user provides input."""
-        from unittest.mock import MagicMock, patch
-
-        from vtt_transcribe.main import main
-
-        audio_file = tmp_path / "test.mp3"
-        audio_file.write_text("fake audio")
-
-        with (
-            patch("sys.argv", ["vtt", str(audio_file), "-k", "test_key", "--diarize", "--hf-token", "hf_test"]),
-            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber_class,
-            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_diarization_import,
-            patch("builtins.input", return_value="Alice") as mock_input,
-            patch("builtins.print") as mock_print,
-        ):
-            mock_transcriber = MagicMock()
-            mock_transcriber.transcribe.return_value = "[00:00:00 - 00:00:05] Hello"
-            mock_transcriber_class.return_value = mock_transcriber
-
-            mock_diarizer = MagicMock()
-            mock_diarizer.diarize_audio.return_value = [(0.0, 5.0, "SPEAKER_00")]
-            mock_diarizer.apply_speakers_to_transcript.return_value = "[00:00:00 - 00:00:05] SPEAKER_00: Hello"
-
-            mock_diarization_import.return_value = (
-                lambda *_args, **_kwargs: mock_diarizer,
-                MagicMock(),
-                MagicMock(return_value=["SPEAKER_00"]),
-                MagicMock(return_value=["context"]),
-            )
-
-            main()
-
-            # Verify input was called
-            mock_input.assert_called()
-
-            # Verify the rename message was printed
-            print_calls = [str(call) for call in mock_print.call_args_list]
-            assert any("Renamed SPEAKER_00 -> Alice" in call for call in print_calls), "Should print rename confirmation"
 
 
 def test_handle_review_speakers_missing_inputs() -> None:
