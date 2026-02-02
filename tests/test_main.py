@@ -38,17 +38,39 @@ class TestMainGuard:
 
     def test_main_guard_execution(self) -> None:
         """Test that main() is called when module is executed directly."""
-        # Test that when we import the module, __name__ check exists and works
-        from vtt_transcribe import main as main_module
+        import subprocess
+        import sys
 
-        # Verify the module has the expected structure
-        assert hasattr(main_module, "main")
-        assert callable(main_module.main)
+        # Execute the module as __main__ using python -m
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, "-m", "vtt_transcribe.main", "--version"],
+            capture_output=True,
+            text=True,
+        )
 
-        # We can't easily test the guard without actually running as __main__
-        # but we can verify it exists in the source
-        source_file = Path(__file__).parent.parent / "vtt_transcribe" / "main.py"
-        source_content = source_file.read_text()
+        # Should successfully show version without errors
+        assert result.returncode == 0
+        assert "." in result.stdout  # Version should contain dots
+
+    def test_main_module_direct_execution(self) -> None:
+        """Test running the module file directly."""
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        main_file = Path(__file__).parent.parent / "vtt_transcribe" / "main.py"
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, str(main_file), "--version"],
+            capture_output=True,
+            text=True,
+        )
+
+        # Should successfully show version when run as a script
+        assert result.returncode == 0
+        assert "." in result.stdout
+
+        # Verify the guard exists in source
+        source_content = main_file.read_text()
         assert 'if __name__ == "__main__":' in source_content
         assert "main()" in source_content
 
