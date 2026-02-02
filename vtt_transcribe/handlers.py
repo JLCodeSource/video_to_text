@@ -227,12 +227,19 @@ def _lazy_import_diarization() -> tuple:
         )
     except (ImportError, ModuleNotFoundError) as e:
         # Handle missing module scenarios for both package installation and direct execution
-        is_missing_package_module = (
-            isinstance(e, ModuleNotFoundError) and e.name in ("vtt_transcribe.diarization", "vtt_transcribe")
+        is_missing_package_module = isinstance(e, ModuleNotFoundError) and e.name in (
+            "vtt_transcribe.diarization",
+            "vtt_transcribe",
         )
         is_missing_dependency = isinstance(e, ModuleNotFoundError) and not is_missing_package_module
 
-        if is_missing_package_module:
+        # Plain ImportError (without a .name attribute) could be:
+        # 1. Direct execution fallback scenario (module not found as package)
+        # 2. Real implementation bugs (e.g., "cannot import name X")
+        # We try the fallback path first for (1), and if that fails, we know it's (2)
+        is_plain_import_error = isinstance(e, ImportError) and not isinstance(e, ModuleNotFoundError)
+
+        if is_missing_package_module or is_plain_import_error:
             # Fallback for direct execution when package module doesn't exist
             try:
                 from diarization import (  # type: ignore[no-redef]
@@ -242,6 +249,13 @@ def _lazy_import_diarization() -> tuple:
                     get_unique_speakers,
                 )
             except ImportError as e2:
+                # If fallback also fails, check if original was missing deps
+                # or if this is a real bug that should be re-raised
+                if is_plain_import_error:
+                    # Original was plain ImportError - this is likely a real bug
+                    # Re-raise original to preserve debugging context
+                    raise e from None
+                # Original was missing package module, fallback failed too
                 msg = (
                     "Diarization dependencies not installed. "
                     "Install with: pip install vtt-transcribe[diarization] "
@@ -257,9 +271,7 @@ def _lazy_import_diarization() -> tuple:
             )
             raise ImportError(msg) from e
         else:
-            # Plain ImportError (not ModuleNotFoundError) indicates a real bug
-            # (e.g., "cannot import name X" due to refactoring, or version/ABI issues).
-            # Re-raise with original message to aid debugging.
+            # Should never reach here, but re-raise just in case
             raise
     return SpeakerDiarizer, format_diarization_output, get_unique_speakers, get_speaker_context_lines
 
