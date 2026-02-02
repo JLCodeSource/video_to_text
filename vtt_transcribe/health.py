@@ -26,3 +26,20 @@ def check_ffmpeg_installed() -> None:
         print("  • Windows (Scoop): scoop install ffmpeg", file=sys.stderr)
         print("  • Or download from: https://ffmpeg.org/download.html\n", file=sys.stderr)
         sys.exit(1)
+
+
+def check_diarization_dependencies() -> None:
+    """Check if diarization dependencies (torch, pyannote) are installed.
+
+    Exits with installation instructions if dependencies are not found.
+    """
+    try:
+        import pyannote.audio  # noqa: F401
+        import torch  # noqa: F401
+    except ImportError:
+        print("\nError: Diarization dependencies not installed.", file=sys.stderr)
+        print(
+            "Install with: pip install vtt-transcribe[diarization] or: uv pip install vtt-transcribe[diarization]\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)

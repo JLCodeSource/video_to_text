@@ -13,7 +13,7 @@ from vtt_transcribe.handlers import (
     handle_standard_transcription,
     save_transcript,
 )
-from vtt_transcribe.health import check_ffmpeg_installed
+from vtt_transcribe.health import check_diarization_dependencies, check_ffmpeg_installed
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,7 +28,7 @@ def get_api_key(api_key_arg: str | None) -> str:
     return api_key
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901
     parser = create_parser()
     args = parser.parse_args()
 
@@ -41,6 +41,10 @@ def main() -> None:
 
     # Run dependency checks before any processing
     check_ffmpeg_installed()
+
+    # Check diarization dependencies if any diarization flag is used
+    if args.diarize or args.diarize_only or args.apply_diarization:
+        check_diarization_dependencies()
 
     try:
         # When running only diarization or applying diarization, OpenAI API key is not required
