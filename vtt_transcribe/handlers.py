@@ -248,6 +248,8 @@ def _lazy_import_diarization() -> tuple:
 
         if is_missing_package_module or is_plain_import_error:
             # Fallback for direct execution when package module doesn't exist
+            # Save reference to original exception for potential re-raise
+            original_exception = e
             try:
                 from diarization import (  # type: ignore[no-redef]
                     SpeakerDiarizer,
@@ -260,8 +262,10 @@ def _lazy_import_diarization() -> tuple:
                 # or if this is a real bug that should be re-raised
                 if is_plain_import_error:
                     # Original was plain ImportError - this is likely a real bug
-                    # Re-raise original to preserve debugging context
-                    raise e from e2
+                    # Explicitly raise the original exception to preserve its traceback
+                    # and chain the fallback failure as the cause
+                    original_exception.__cause__ = e2
+                    raise original_exception from None
                 # Original was missing package module, fallback failed too
                 raise ImportError(DIARIZATION_DEPS_ERROR_MSG) from e2
         elif is_missing_dependency:

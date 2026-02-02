@@ -178,25 +178,25 @@ def test_main_guard_exists() -> None:
     assert "main()" in content
 
 
-def test_main_module_entry_point() -> None:
+def test_main_module_entry_point(capsys: pytest.CaptureFixture[str]) -> None:
     """Test that python -m vtt_transcribe works via __main__.py."""
     import runpy
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import patch
 
-    with (
-        patch("sys.argv", ["vtt_transcribe", "--version"]),
-        patch("vtt_transcribe.main.create_parser") as mock_parser,
-    ):
-        mock_args = MagicMock()
-        mock_args.input_file = None
-        mock_parser.return_value.parse_args.return_value = mock_args
+    from vtt_transcribe import __version__
 
-        # Import __main__.py which should call main() and exit
-        with pytest.raises(SystemExit):
+    with patch("sys.argv", ["vtt_transcribe", "--version"]):
+        # Import __main__.py which should call main() with --version and exit with code 0
+        with pytest.raises(SystemExit) as exc_info:
             runpy.run_path(
                 str(Path(__file__).parent.parent / "vtt_transcribe" / "__main__.py"),
                 run_name="__main__",
             )
+
+        # Verify --version exits with code 0 and prints the version
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        assert __version__ in captured.out
 
 
 if __name__ == "__main__":
