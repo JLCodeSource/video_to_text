@@ -11,6 +11,13 @@ if TYPE_CHECKING:
 AUDIO_EXTENSION = ".mp3"
 TRANSCRIPT_EXTENSION = ".txt"
 
+# Error message for missing diarization dependencies
+DIARIZATION_DEPS_ERROR_MSG = (
+    "Diarization dependencies not installed. "
+    "Install with: pip install vtt-transcribe[diarization] "
+    "or: uv pip install vtt-transcribe[diarization]"
+)
+
 
 def save_transcript(output_path: Path, transcript: str) -> None:
     """Save transcript to a file, ensuring .txt extension."""
@@ -254,22 +261,12 @@ def _lazy_import_diarization() -> tuple:
                 if is_plain_import_error:
                     # Original was plain ImportError - this is likely a real bug
                     # Re-raise original to preserve debugging context
-                    raise e from None
+                    raise e from e2
                 # Original was missing package module, fallback failed too
-                msg = (
-                    "Diarization dependencies not installed. "
-                    "Install with: pip install vtt-transcribe[diarization] "
-                    "or: uv pip install vtt-transcribe[diarization]"
-                )
-                raise ImportError(msg) from e2
+                raise ImportError(DIARIZATION_DEPS_ERROR_MSG) from e2
         elif is_missing_dependency:
             # Missing dependency within the diarization module (e.g., torch, pyannote.audio)
-            msg = (
-                "Diarization dependencies not installed. "
-                "Install with: pip install vtt-transcribe[diarization] "
-                "or: uv pip install vtt-transcribe[diarization]"
-            )
-            raise ImportError(msg) from e
+            raise ImportError(DIARIZATION_DEPS_ERROR_MSG) from e
         else:
             # Should never reach here, but re-raise just in case
             raise
