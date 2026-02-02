@@ -13,6 +13,7 @@ from vtt_transcribe.handlers import (
     handle_standard_transcription,
     save_transcript,
 )
+from vtt_transcribe.health import check_ffmpeg_installed
 
 # Load environment variables from .env file
 load_dotenv()
@@ -37,6 +38,9 @@ def main() -> None:
     # If adding new flags that don't require input_file, update this check accordingly.
     if args.input_file is None:
         parser.error("the following arguments are required: input_file")
+
+    # Run dependency checks before any processing
+    check_ffmpeg_installed()
 
     try:
         # When running only diarization or applying diarization, OpenAI API key is not required
