@@ -1,0 +1,8 @@
+# Ignore generated export files
+github_issues_export_*.json
+github_issues_export_*.csv
+
+# Keep the export script and README
+!export_issues.py
+!README.md
+!.gitignore
