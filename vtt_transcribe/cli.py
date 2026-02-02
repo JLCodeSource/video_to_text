@@ -2,6 +2,8 @@
 
 import argparse
 
+from vtt_transcribe import __version__
+
 
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser."""
@@ -23,9 +25,17 @@ Environment Variables:
         """,
     )
 
+    # Version
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+
     # Positional arguments
     parser.add_argument(
         "input_file",
+        nargs="?",
         help="Path to the video or audio file to transcribe (.mp4, .mp3, .wav, .ogg, .m4a)",
     )
 

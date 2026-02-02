@@ -8,6 +8,7 @@
 - [ ] Linting clean: `uv run ruff check`
 - [ ] Pre-commit hooks passing
 - [ ] Code coverage ≥ 95%
+- [ ] Test coverage 100% on all vtt_transcribe files
 
 ### Documentation
 - [ ] README.md updated with correct version

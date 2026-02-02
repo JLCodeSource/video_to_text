@@ -150,6 +150,13 @@ class TestCreateParser:
         args = parser.parse_args(["audio.mp3", "--hf-token", "test-token"])
         assert args.hf_token == "test-token"  # noqa: S105
 
+    def test_parser_accepts_version_flag(self) -> None:
+        """Should accept --version flag and exit."""
+        parser = create_parser()
+        with pytest.raises(SystemExit) as exc_info:
+            parser.parse_args(["--version"])
+        assert exc_info.value.code == 0
+
 
 class TestApiKeyHandling:
     """Test API key handling in main()."""
