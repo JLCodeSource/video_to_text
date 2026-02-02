@@ -31,6 +31,13 @@ def main() -> None:
     parser = create_parser()
     args = parser.parse_args()
 
+    # Validate that input_file is provided (unless using --version which is handled by argparse)
+    # Note: input_file uses nargs="?" to support --version without requiring input_file.
+    # This means parse_args() succeeds without input_file, so we validate here.
+    # If adding new flags that don't require input_file, update this check accordingly.
+    if args.input_file is None:
+        parser.error("the following arguments are required: input_file")
+
     try:
         # When running only diarization or applying diarization, OpenAI API key is not required
         api_key = None if args.diarize_only or args.apply_diarization else get_api_key(args.api_key)
