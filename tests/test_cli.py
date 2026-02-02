@@ -160,9 +160,11 @@ class TestCreateParser:
     def test_parser_requires_input_file_when_not_version(self) -> None:
         """Should require input_file when not using --version."""
         parser = create_parser()
-        # When input_file is optional (nargs="?"), parse_args succeeds but returns None
+        # Parser accepts optional input_file (nargs="?") to support --version without input_file.
+        # However, this allows parse_args to succeed without input_file, returning None.
+        # The validation in main.py catches this and provides a proper error message.
         args = parser.parse_args([])
-        assert args.input_file is None  # This is the bug we're fixing in main.py
+        assert args.input_file is None
 
 
 class TestApiKeyHandling:
