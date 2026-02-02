@@ -1,6 +1,8 @@
 """Tests for CLI argument parsing."""
 
 import os
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -475,3 +477,18 @@ class TestMainCliArgumentParsing:
 
         # Should exit with error code (argparse.error exits with code 2)
         assert exc_info.value.code == 2
+
+    def test_cli_with_no_arguments_shows_usage(self) -> None:
+        """Test that running vtt with no arguments displays usage information."""
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, "-m", "vtt_transcribe"],
+            capture_output=True,
+            text=True,
+        )
+
+        # Should exit with code 2 (argparse standard for usage errors)
+        assert result.returncode == 2
+
+        # Should show usage information in stderr
+        assert "usage:" in result.stderr.lower()
+        assert "vtt" in result.stderr

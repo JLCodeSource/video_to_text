@@ -8,6 +8,7 @@ from vtt_transcribe import __version__
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser."""
     parser = argparse.ArgumentParser(
+        prog="vtt",
         description="Transcribe video or audio files using OpenAI's Whisper model",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
