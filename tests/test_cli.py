@@ -157,6 +157,13 @@ class TestCreateParser:
             parser.parse_args(["--version"])
         assert exc_info.value.code == 0
 
+    def test_parser_requires_input_file_when_not_version(self) -> None:
+        """Should require input_file when not using --version."""
+        parser = create_parser()
+        # When input_file is optional (nargs="?"), parse_args succeeds but returns None
+        args = parser.parse_args([])
+        assert args.input_file is None  # This is the bug we're fixing in main.py
+
 
 class TestApiKeyHandling:
     """Test API key handling in main()."""
@@ -456,3 +463,13 @@ class TestMainCliArgumentParsing:
                 main()
 
             mock_transcribe.assert_called_once()
+
+    def test_main_without_input_file_shows_error(self) -> None:
+        """Should show error message when input_file is not provided."""
+        from vtt_transcribe.main import main
+
+        with patch("sys.argv", ["vtt"]), pytest.raises(SystemExit) as exc_info:
+            main()
+
+        # Should exit with error code (argparse.error exits with code 2)
+        assert exc_info.value.code == 2

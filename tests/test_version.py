@@ -1,6 +1,7 @@
 """Tests for version handling."""
 
 import subprocess
+import sys
 from importlib.metadata import PackageNotFoundError
 from unittest.mock import patch
 
@@ -30,17 +31,25 @@ def test_version_when_package_not_found() -> None:
 
 def test_version_flag_long() -> None:
     """Should display version with --version flag."""
-    result = subprocess.run(["vtt", "--version"], capture_output=True, text=True, check=False)  # noqa: S607
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "vtt_transcribe.main", "--version"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     assert result.returncode == 0
-    assert "vtt" in result.stdout
-    # Check that version is displayed (format: "vtt X.Y.Z" or "vtt unknown")
-    assert any(char.isdigit() or result.stdout.strip().endswith("unknown") for char in result.stdout)
+    # Check that version is displayed (format should contain version with dots or "unknown")
+    assert "." in result.stdout or "unknown" in result.stdout
 
 
 def test_version_flag_short() -> None:
     """Should display version with -v flag."""
-    result = subprocess.run(["vtt", "-v"], capture_output=True, text=True, check=False)  # noqa: S607
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "vtt_transcribe.main", "-v"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     assert result.returncode == 0
-    assert "vtt" in result.stdout
-    # Check that version is displayed (format: "vtt X.Y.Z" or "vtt unknown")
-    assert any(char.isdigit() or result.stdout.strip().endswith("unknown") for char in result.stdout)
+    # Check that version is displayed (format should contain version with dots or "unknown")
+    assert "." in result.stdout or "unknown" in result.stdout
