@@ -244,21 +244,18 @@ def _lazy_import_diarization() -> tuple:
                 )
                 raise ImportError(msg) from e2
         else:
-            # Raise a user-friendly ImportError for missing dependencies within the diarization module
+            # Missing dependency within the diarization module (e.g., torch, pyannote.audio)
             msg = (
                 "Diarization dependencies not installed. "
                 "Install with: pip install vtt-transcribe[diarization] "
                 "or: uv pip install vtt-transcribe[diarization]"
             )
             raise ImportError(msg) from e
-    except ImportError as e:
-        # Any other ImportError (e.g., missing torch/pyannote inside the module)
-        msg = (
-            "Diarization dependencies not installed. "
-            "Install with: pip install vtt-transcribe[diarization] "
-            "or: uv pip install vtt-transcribe[diarization]"
-        )
-        raise ImportError(msg) from e
+    # Note: We intentionally do NOT catch generic ImportError here.
+    # Other ImportErrors (e.g., "cannot import name X" due to refactoring bugs,
+    # or version/ABI compatibility issues) should propagate with their original
+    # error messages to aid debugging, rather than being masked by the generic
+    # "dependencies not installed" message.
     return SpeakerDiarizer, format_diarization_output, get_unique_speakers, get_speaker_context_lines
 
 
