@@ -20,7 +20,7 @@ class TestDiarizationImportHandling:
 
         # Mock the transcription to succeed so we can test diarization import failure
         with (
-            patch("vtt_transcribe.handlers.VideoTranscriber") as mock_transcriber,
+            patch("vtt_transcribe.transcriber.VideoTranscriber") as mock_transcriber,
             patch.dict(sys.modules, {"vtt_transcribe.diarization": None}),
             patch("sys.argv", ["vtt", str(audio_file), "--diarize"]),
             patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
