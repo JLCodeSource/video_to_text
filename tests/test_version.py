@@ -38,7 +38,8 @@ def test_version_flag_long() -> None:
         check=False,
     )
     assert result.returncode == 0
-    # Check that version is displayed (should be in format "program version" with version containing dots or "unknown")
+    # Check that version is displayed (format: "program version" - two space-separated parts)
+    # Note: This assumes neither program name nor version contains spaces
     output_parts = result.stdout.strip().split()
     assert len(output_parts) == 2, f"Version output should have program name and version, got: {result.stdout.strip()}"
     version = output_parts[1]  # Second part should be the version
@@ -54,7 +55,8 @@ def test_version_flag_short() -> None:
         check=False,
     )
     assert result.returncode == 0
-    # Check that version is displayed (should be in format "program version" with version containing dots or "unknown")
+    # Check that version is displayed (format: "program version" - two space-separated parts)
+    # Note: This assumes neither program name nor version contains spaces
     output_parts = result.stdout.strip().split()
     assert len(output_parts) == 2, f"Version output should have program name and version, got: {result.stdout.strip()}"
     version = output_parts[1]  # Second part should be the version

@@ -32,6 +32,9 @@ def main() -> None:
     args = parser.parse_args()
 
     # Validate that input_file is provided (unless using --version which is handled by argparse)
+    # Note: input_file uses nargs="?" to support --version without requiring input_file.
+    # This means parse_args() succeeds without input_file, so we validate here.
+    # If adding new flags that don't require input_file, update this check accordingly.
     if args.input_file is None:
         parser.error("the following arguments are required: input_file")
 
