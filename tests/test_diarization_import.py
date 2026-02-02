@@ -33,7 +33,7 @@ class TestDiarizationImportHandling:
             with pytest.raises(SystemExit) as exc_info:
                 main()
 
-            assert exc_info.value.code == 1
+        assert exc_info.value.code == 1
 
         # Capture output to check error message (errors print to stdout, not stderr)
         captured = capsys.readouterr()
@@ -45,14 +45,14 @@ class TestDiarizationImportHandling:
         audio_file.write_text("dummy audio")
 
         # Simulate missing pyannote.audio dependency (the actual scenario)
-        with (
+        with (  # noqa: SIM117
             patch.dict(sys.modules, {"pyannote.audio": None}),
             patch("sys.argv", ["vtt", str(audio_file), "--diarize-only"]),
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
 
-            assert exc_info.value.code == 1
+        assert exc_info.value.code == 1
 
     def test_apply_diarization_without_dependencies_shows_error(self, tmp_path: Path) -> None:
         """Should show error when --apply-diarization is used without diarization dependencies."""
@@ -62,11 +62,11 @@ class TestDiarizationImportHandling:
         transcript_file.write_text("dummy transcript")
 
         # Simulate missing torch dependency (the actual scenario)
-        with (
+        with (  # noqa: SIM117
             patch.dict(sys.modules, {"torch": None}),
             patch("sys.argv", ["vtt", str(audio_file), "--apply-diarization", str(transcript_file)]),
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
 
-            assert exc_info.value.code == 1
+        assert exc_info.value.code == 1
