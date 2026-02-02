@@ -32,7 +32,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Validate that input_file is provided (unless using --version which is handled by argparse)
-    if not args.input_file:
+    if args.input_file is None:
         parser.error("the following arguments are required: input_file")
 
     try:

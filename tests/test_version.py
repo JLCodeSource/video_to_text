@@ -38,8 +38,11 @@ def test_version_flag_long() -> None:
         check=False,
     )
     assert result.returncode == 0
-    # Check that version is displayed (format should contain version with dots or "unknown")
-    assert "." in result.stdout or "unknown" in result.stdout
+    # Check that version is displayed (should be in format "program version" with version containing dots or "unknown")
+    output_parts = result.stdout.strip().split()
+    assert len(output_parts) >= 2, "Version output should have program name and version"
+    version = output_parts[-1]  # Last part should be the version
+    assert "." in version or version == "unknown", f"Expected version format with dots or 'unknown', got: {version}"
 
 
 def test_version_flag_short() -> None:
@@ -51,5 +54,8 @@ def test_version_flag_short() -> None:
         check=False,
     )
     assert result.returncode == 0
-    # Check that version is displayed (format should contain version with dots or "unknown")
-    assert "." in result.stdout or "unknown" in result.stdout
+    # Check that version is displayed (should be in format "program version" with version containing dots or "unknown")
+    output_parts = result.stdout.strip().split()
+    assert len(output_parts) >= 2, "Version output should have program name and version"
+    version = output_parts[-1]  # Last part should be the version
+    assert "." in version or version == "unknown", f"Expected version format with dots or 'unknown', got: {version}"
