@@ -244,7 +244,7 @@ def _lazy_import_diarization() -> tuple:
                 )
                 raise ImportError(msg) from e2
         else:
-            # Re-raise if it's a missing dependency within the diarization module
+            # Raise a user-friendly ImportError for missing dependencies within the diarization module
             msg = (
                 "Diarization dependencies not installed. "
                 "Install with: pip install vtt-transcribe[diarization] "
