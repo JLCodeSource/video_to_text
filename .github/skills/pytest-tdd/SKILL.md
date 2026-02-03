@@ -94,7 +94,7 @@ uv run pytest tests/test_main.py::TestClass::test_name -v  # Single test
 
 ## Hard Rules
 
-- Never commit code with broken tests
+- Never commit code with broken tests for squash merge commit
 - Always run `make lint` and `make test` before merging to feature branch
 - Mock only where necessary; test real code when possible
-- Refactor phase must improve something (code quality, naming, organization, etc.)
+- Refactor phase **must** improve something (code quality, naming, organization, etc.)
