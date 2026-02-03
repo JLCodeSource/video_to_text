@@ -73,7 +73,7 @@ bd create "Try out Beads"
 ## Learn More
 
 - **Documentation**: [github.com/steveyegge/beads/docs](https://github.com/steveyegge/beads/tree/main/docs)
-- **Quick Start Guide**: Run `bd quickstart`
+- **Quick Start Guide**: Run `bd onboard`
 - **Examples**: [github.com/steveyegge/beads/examples](https://github.com/steveyegge/beads/tree/main/examples)
 
 ---
