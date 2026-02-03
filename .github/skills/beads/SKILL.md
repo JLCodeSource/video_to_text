@@ -13,8 +13,7 @@ Use `bd` for all task and issue tracking. Issues are chained together like beads
 ### Quick Commands
 ```bash
 bd ready                             # Find available work (no blockers)
-bd show <id>                         # View issue details
-bd update <id> --status in_progress  # Claim work
+bd update <id> --claim               # Claim work
 bd close <id>                        # Complete work
 bd sync                              # Sync with git (export to JSONL)
 ```
@@ -45,27 +44,20 @@ bd create "Fix dependency check"                # Simple task
 bd create "Add feature" --type feature          # Specify type
 bd create "P0 bug" --priority P0 --type bug     # With priority
 bd create "Epic name" --type epic               # Create epic
-bd create "Subtask" --parent T095               # Create child issue
+bd create "Subtask" --parent <parent_id>               # Create child issue
 ```
 
 ### Update Issues
 ```bash
 bd update <id> --status in_progress   # Start working
 bd update <id> --status closed        # Complete task
+bd update <id> --status blocked       # Blocked on dependencies
+bd update <id> --status open          # Reopen issue
 bd update --claim                     # Claim last touched issue
 bd update <id> --assignee @me         # Assign to yourself
 bd update <id> --priority P1          # Change priority
 bd update <id> --add-label bug        # Add label
 bd update <id> --title "New title"    # Update title
-```
-
-### Quick Status Changes
-```bash
-# Common workflow aliases
-bd update <id> --status open              # Open/reopen
-bd update <id> --status in_progress       # Start work
-bd update <id> --status blocked           # Blocked
-bd update <id> --status closed            # Complete
 ```
 
 ### Dependencies & Structure
@@ -90,7 +82,7 @@ bd list --updated-after "1 week ago"      # Relative dates
 ### JSON Output
 ```bash
 bd list --json                            # JSON output
-bd show T095_002 --json                   # JSON issue details
+bd show <id> --json                   # JSON issue details
 ```
 
 ### Status & Statistics
@@ -104,13 +96,6 @@ bd stale                                  # Show stale issues
 ```bash
 bd export --format jsonl                  # Export to JSONL
 bd sync                                   # Sync to JSONL (git)
-```
-
-### Maintenance
-```bash
-bd init                                   # Initialize in repo
-bd doctor                                 # Check installation health
-bd info                                   # Show database info
 ```
 
 ## Common Filters
@@ -164,6 +149,8 @@ When ending a work session, complete ALL steps:
 ```bash
 bd init                              # Initialize in repository
 bd onboard                           # Get started guide
+bd doctor                            # Check installation health
+bd info                              # Show database info
 ```
 
 ## References
