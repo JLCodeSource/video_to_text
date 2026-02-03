@@ -214,9 +214,9 @@ uv run vtt path/to/input.mp4
 
 ### Files of interest
  - [CHANGELOG.md](docs/CHANGELOG.md) — version history and upgrade instructions
- - [main.py](main.py) — CLI entrypoint and `VideoTranscriber` implementation
- - [test_main.py](test_main.py) — main test suite (integration + unit tests)
- - [test_audio_management.py](test_audio_management.py) — audio/chunk management tests
+ - [vtt_transcribe/main.py](vtt_transcribe/main.py) — CLI entrypoint and `VideoTranscriber` implementation
+ - [tests/test_main.py](tests/test_main.py) — main test suite (integration + unit tests)
+ - [tests/test_audio_management.py](tests/test_audio_management.py) — audio/chunk management tests
  - [Makefile](Makefile) — convenience commands for dev tooling
  - [ruff.toml](ruff.toml) — ruff configuration
  - [.pre-commit-config.yaml](.pre-commit-config.yaml) — pre-commit hooks for formatting/linting
