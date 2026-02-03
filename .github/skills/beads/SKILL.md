@@ -155,4 +155,4 @@ bd info                              # Show database info
 
 ## References
 - GitHub: https://github.com/steveyegge/beads
-- Install: `curl -sSL https://beads.link/install.sh | bash`
+- Install: `curl -sSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash`
