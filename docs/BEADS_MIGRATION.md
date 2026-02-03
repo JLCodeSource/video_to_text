@@ -46,8 +46,7 @@ Each migrated issue includes an external reference to the original GitHub issue:
 - Example: `gh-165` links to GitHub issue #165
 
 ### ID Mapping
-Full GitHub → Beads ID mapping stored in:
-- `scripts/github_beads_id_mapping.json`
+Full GitHub → Beads ID mapping was generated during migration and is no longer stored in the repository. The external references (gh-XXX) in the `.beads` directory serve as the canonical link between GitHub issues and Beads issues.
 
 ## Verification Results
 
@@ -57,18 +56,15 @@ Full GitHub → Beads ID mapping stored in:
 ✅ **Relationships**: 11 parent-child relationships preserved  
 ✅ **Status**: Open/closed status maintained from GitHub  
 
-## Scripts Created
+## Migration Process
 
-### Migration Scripts
-1. **export_issues.py** - Export GitHub issues to JSON/CSV
-2. **map_issues_to_beads.py** - Analyze and map issue relationships
-3. **migrate_to_beads.py** - Execute migration via bd CLI
-4. **verify_migration.py** - Verify migration completed successfully
+The migration was completed using a series of Python scripts that have since been removed:
+1. **export_issues.py** - Exported GitHub issues to JSON/CSV
+2. **map_issues_to_beads.py** - Analyzed and mapped issue relationships
+3. **migrate_to_beads.py** - Executed migration via bd CLI
+4. **verify_migration.py** - Verified migration completed successfully
 
-### Output Files
-- `github_issues_export_YYYYMMDD_HHMMSS.json` - Full GitHub export
-- `beads_migration_mapping.json` - Issue relationship mapping
-- `github_beads_id_mapping.json` - GH → Beads ID mapping
+The migration scripts are no longer needed as the migration is complete and the `.beads` directory now serves as the source of truth for issue tracking.
 
 ## GitHub Issues Status
 

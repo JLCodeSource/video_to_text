@@ -58,7 +58,7 @@ ruff-fix:
 	@uv run ruff format .
 
 mypy:
-	@uv run mypy . --exclude scripts/ --ignore-missing-imports --disallow-untyped-defs --disallow-incomplete-defs --check-untyped-defs --warn-unused-ignores --warn-redundant-casts
+	@uv run mypy . --ignore-missing-imports --disallow-untyped-defs --disallow-incomplete-defs --check-untyped-defs --warn-unused-ignores --warn-redundant-casts
 
 lint: ruff-check mypy
 
