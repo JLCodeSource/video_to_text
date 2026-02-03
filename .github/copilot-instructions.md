@@ -198,5 +198,5 @@ The `_format_timestamp()` method converts seconds to `MM:SS` format. When chunki
 ### Key Documents
 - `docs/ROADMAP.md` — Epics and feature timeline
 - `docs/CONTRIBUTING.md` — Contribution guidelines
-- `RELEASE_CHECKLIST.md` — Release process
+- `docs/RELEASE_CHECKLIST.md` — Release process
 - `pyproject.toml` — Package metadata and dependencies
