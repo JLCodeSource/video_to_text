@@ -50,7 +50,16 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          body: ${{ steps.tag_message.outputs.message }}
+          body: |
+            ${{ steps.tag_message.outputs.message }}
+            
+            ## Docker Images
+            
+            Docker images for this release are available at:
+            - Docker Hub: `docker pull jlcodesource/vtt-transcribe:${{ github.ref_name }}`
+            - GHCR: `docker pull ghcr.io/jlcodesource/vtt-transcribe:${{ github.ref_name }}`
+            
+            See [Docker documentation](docs/DOCKER_REGISTRY.md) for usage instructions.
           draft: ${{ contains(github.ref_name, 'b') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
           prerelease: ${{ contains(github.ref_name, 'b') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
