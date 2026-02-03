@@ -17,8 +17,8 @@ from typing import Any
 def run_gh_command(args: list[str]) -> Any:
     """Run a gh CLI command and return parsed JSON output."""
     try:
-        result = subprocess.run(  # noqa: S603
-            ["gh", *args],  # noqa: S607
+        result = subprocess.run(
+            ["gh", *args],
             capture_output=True,
             text=True,
             check=True,

@@ -93,4 +93,4 @@ ignore = [
 ]
 
 # Per-file ignores for tests only
-per-file-ignores = { "test_*.py" = ["SLF001"] }
+per-file-ignores = { "test_*.py" = ["SLF001"], "scripts/*.py" = ["S603", "S607"] }
