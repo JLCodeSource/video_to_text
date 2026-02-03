@@ -87,6 +87,46 @@ uv pip install vtt-transcribe[diarization]
 
 > **Note:** Installing with `[diarization]` extras adds large dependencies such as PyTorch and `pyannote.audio`, which significantly increases the download and install size of your environment. The actual diarization model weights are typically downloaded at runtime (e.g., via the Hugging Face cache) on first use, so overall disk usage for diarization (dependencies + cached models) can reach several GB. Only install these extras if you need speaker identification features.
 
+### Using Docker (Alternative)
+
+Docker images are available on Docker Hub and GitHub Container Registry:
+
+```bash
+# Pull from Docker Hub
+docker pull jlcodesource/vtt-transcribe:latest
+
+# OR: Pull from GitHub Container Registry
+docker pull ghcr.io/jlcodesource/vtt-transcribe:latest
+
+# Run with volume mount for input/output files
+docker run --rm -v $(pwd):/workspace \
+  -e OPENAI_API_KEY="your-key" \
+  jlcodesource/vtt-transcribe:latest \
+  /workspace/input.mp4
+
+# With diarization (requires HF_TOKEN)
+docker run --rm -v $(pwd):/workspace \
+  -e OPENAI_API_KEY="your-key" \
+  -e HF_TOKEN="your-hf-token" \
+  jlcodesource/vtt-transcribe:latest \
+  /workspace/input.mp4 --diarize
+
+# GPU support for diarization (requires nvidia-docker)
+docker run --rm --gpus all -v $(pwd):/workspace \
+  -e OPENAI_API_KEY="your-key" \
+  -e HF_TOKEN="your-hf-token" \
+  jlcodesource/vtt-transcribe:latest \
+  /workspace/input.mp4 --diarize --device cuda
+```
+
+**Docker Image Tags:**
+- `latest` - Latest stable release
+- `v0.3.0b3` - Specific version tags
+- `0.3` - Minor version tags (e.g., 0.3.x latest)
+- `0` - Major version tags
+
+For more Docker usage patterns and troubleshooting, see [Docker Registry Documentation](docs/DOCKER_REGISTRY.md).
+
 ### From Source
 
 1. Ensure ffmpeg is installed on your system (see Prerequisites above)
