@@ -33,8 +33,7 @@ dependencies = [
 Homepage = "https://github.com/JLCodeSource/vtt-transcribe"
 Repository = "https://github.com/JLCodeSource/vtt-transcribe"
 Issues = "https://github.com/JLCodeSource/vtt-transcribe/issues"
-Changelog = "https://github.com/JLCodeSource/vtt-transcribe/blob/main/CHANGELOG.md"
-Project = "https://github.com/users/JLCodeSource/projects/2"
+Changelog = "https://github.com/JLCodeSource/vtt-transcribe/blob/main/docs/CHANGELOG.md"
 
 [project.optional-dependencies]
 diarization = [

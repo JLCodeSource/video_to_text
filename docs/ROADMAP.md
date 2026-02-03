@@ -1,6 +1,6 @@
 # Roadmap
 
-## Version 0.3.0b1 (Released 2026-02-01)
+## Version 0.3.0b3 (Released 2026-02-01)
 ✅ **COMPLETED** - PyPI packaging and publication
 - Package renamed from `vtt` to `vtt-transcribe` for PyPI publication
 - Build system migrated to Hatch for modern Python packaging
@@ -12,7 +12,7 @@
 
 ## Version 0.3.0 (Next - Stable Release)
 - Complete any remaining documentation improvements
-- Address any user feedback from 0.3.0b1
+- Address any user feedback from 0.3.0b3
 - Final testing across platforms
 - Remove beta tag and release stable version
 

@@ -103,7 +103,7 @@ make install-diarization
 
 ## Upgrading from 0.2.0
 
-**Important:** Version 0.3.0 introduces optional dependencies for speaker diarization. If you are upgrading from 0.2.0 and want to use diarization features, you need to explicitly install the `[diarization]` extra. See the [CHANGELOG](CHANGELOG.md) for detailed upgrade instructions.
+**Important:** Version 0.3.0 introduces optional dependencies for speaker diarization. If you are upgrading from 0.2.0 and want to use diarization features, you need to explicitly install the `[diarization]` extra. See the [CHANGELOG](docs/CHANGELOG.md) for detailed upgrade instructions.
 
 ## Setup Environment Variables
 
@@ -213,10 +213,10 @@ uv run vtt path/to/input.mp4
 	 with help from GitHub Copilot.
 
 ### Files of interest
- - [CHANGELOG.md](CHANGELOG.md) — version history and upgrade instructions
- - [main.py](main.py) — CLI entrypoint and `VideoTranscriber` implementation
- - [test_main.py](test_main.py) — main test suite (integration + unit tests)
- - [test_audio_management.py](test_audio_management.py) — audio/chunk management tests
+ - [CHANGELOG.md](docs/CHANGELOG.md) — version history and upgrade instructions
+ - [vtt_transcribe/main.py](vtt_transcribe/main.py) — CLI entrypoint and `VideoTranscriber` implementation
+ - [tests/test_main.py](tests/test_main.py) — main test suite (integration + unit tests)
+ - [tests/test_audio_management.py](tests/test_audio_management.py) — audio/chunk management tests
  - [Makefile](Makefile) — convenience commands for dev tooling
  - [ruff.toml](ruff.toml) — ruff configuration
  - [.pre-commit-config.yaml](.pre-commit-config.yaml) — pre-commit hooks for formatting/linting
@@ -224,7 +224,7 @@ uv run vtt path/to/input.mp4
 ### Contributing
  - Please run `make format` and `make lint` before submitting a PR.
  - Run `make test` to ensure all tests pass locally.
- - See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development setup and workflow.
+ - See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed development setup and workflow.
 
 ## Building and Publishing (For Maintainers)
 
@@ -241,11 +241,11 @@ make build
 make publish-test
 
 # Production publish to PyPI (via GitHub Actions on release)
-# Tag a release: git tag v0.3.0b1 && git push origin v0.3.0b1
+# Tag a release: git tag v0.3.0b3 && git push origin v0.3.0b3
 # Create GitHub release (triggers automated publish workflow)
 ```
 
-For complete build and publish workflow documentation, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For complete build and publish workflow documentation, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ### License
  - See the `LICENSE` file in the repository root.

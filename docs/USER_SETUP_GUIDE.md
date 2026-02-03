@@ -106,7 +106,7 @@ Once setup is complete, we can test with TestPyPI:
 ### Option 1: Test with workflow_dispatch
 ```bash
 # Trigger workflow manually with test flag
-gh workflow run publish.yml --ref packaging/v0.3.0b1 -f dry-run=true
+gh workflow run publish.yml --ref packaging/v0.3.0b3 -f dry-run=true
 ```
 
 ### Option 2: Test publish to TestPyPI locally

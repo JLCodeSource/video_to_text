@@ -267,7 +267,7 @@ vtt-transcribe/
 - Feature branches: `feature/description`
 - Bug fixes: `fix/description`
 - Documentation: `docs/description`
-- Releases: `packaging/v0.3.0b1`
+- Releases: `packaging/v0.3.0b3`
 
 ### Commit Message Format
 
