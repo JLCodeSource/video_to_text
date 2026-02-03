@@ -10,6 +10,15 @@ Use `bd` for all task and issue tracking. Issues are chained together like beads
 
 ## Core Workflow Commands
 
+### Quick Commands
+```bash
+bd ready                             # Find available work (no blockers)
+bd show <id>                         # View issue details
+bd update <id> --status in_progress  # Claim work
+bd close <id>                        # Complete work
+bd sync                              # Sync with git (export to JSONL)
+```
+
 ### View Tasks
 ```bash
 bd list                              # List open issues (default limit: 50)
@@ -116,16 +125,45 @@ bd info                                   # Show database info
 
 ```bash
 # 1. View available tasks
-bd list --ready --pretty
+bd ready                             # Find work with no blockers
+bd list --ready --pretty             # Alternative with tree view
 
 # 2. Start work on a task
-bd update T095_002 --claim
+bd update T095_002 --claim           # Atomic claim
 
 # 3. View task details
 bd show T095_002
 
 # 4. Mark complete
-bd update T095_002 --status closed
+bd close T095_002                    # Quick close
+bd update T095_002 --status closed   # Alternative
+```
+
+## Session Completion (Landing the Plane)
+
+When ending a work session, complete ALL steps:
+
+1. **File issues for remaining work** - Create follow-up tasks
+2. **Run quality gates** - `make lint && make test`
+3. **Update issue status** - Close finished, update in-progress
+4. **PUSH TO REMOTE** (MANDATORY):
+   ```bash
+   git pull --rebase
+   bd sync                           # Sync beads to JSONL
+   git push
+   git status                        # Verify "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL**: Work is NOT complete until `git push` succeeds. Never stop before pushing.
+
+## Setup
+
+```bash
+bd init                              # Initialize in repository
+bd onboard                           # Get started guide
 ```
 
 ## References
