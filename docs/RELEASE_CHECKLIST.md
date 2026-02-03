@@ -47,19 +47,19 @@
 
 ### 1. Create Tag
 ```bash
-git tag v0.3.0b1
+git tag v0.3.0b3
 git tag -n  # Verify tag
 ```
 
 ### 2. Push Tag
 ```bash
-git push origin v0.3.0b1
+git push origin v0.3.0b3
 ```
 
 ### 3. Create GitHub Release
 1. Go to https://github.com/JLCodeSource/vtt-transcribe/releases/new
-2. Select tag: v0.3.0b1
-3. Release title: "v0.3.0b1 - PyPI Package Release"
+2. Select tag: v0.3.0b3
+3. Release title: "v0.3.0b3 - PyPI Package Release"
 4. Description: Copy from CHANGELOG.md
 5. Mark as pre-release (beta)
 6. Publish release (triggers workflow)
@@ -72,7 +72,7 @@ git push origin v0.3.0b1
 
 ### 5. Verify PyPI Publication
 - [ ] Package visible at: https://pypi.org/project/vtt-transcribe/
-- [ ] Version 0.3.0b1 listed
+- [ ] Version 0.3.0b3 listed
 - [ ] Metadata correct (description, classifiers, URLs)
 - [ ] README rendering properly
 
@@ -102,7 +102,7 @@ git push origin v0.3.0b1
 ### Branch Management
 - [ ] Commit all changes
 - [ ] Push worktree branch
-- [ ] Merge to packaging/v0.3.0b1
+- [ ] Merge to packaging/v0.3.0b3
 - [ ] Create PR to main
 - [ ] Review and merge PR
 - [ ] Delete worktree branch
@@ -125,12 +125,12 @@ If something goes wrong:
 1. **Before Publishing**: Simply don't create the GitHub release
 2. **After Publishing**: 
    - Cannot delete PyPI releases
-   - Publish a patch version (v0.3.0b2) with fixes
+   - Publish a patch version (v0.3.0b4) with fixes
    - Mark problematic version as "yanked" on PyPI if critical
 
 ## Notes
 
-- First PyPI release: v0.3.0b1 (beta)
+- First PyPI release: v0.3.0b3 (beta)
 - Package name: `vtt-transcribe`
 - Import name: `vtt_transcribe`
 - CLI command: `vtt`

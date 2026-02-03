@@ -241,7 +241,7 @@ make build
 make publish-test
 
 # Production publish to PyPI (via GitHub Actions on release)
-# Tag a release: git tag v0.3.0b1 && git push origin v0.3.0b1
+# Tag a release: git tag v0.3.0b3 && git push origin v0.3.0b3
 # Create GitHub release (triggers automated publish workflow)
 ```
 
