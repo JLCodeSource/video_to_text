@@ -2,6 +2,22 @@
 
 This document describes the GitHub secrets required for publishing Docker images to Docker Hub and GitHub Container Registry (GHCR).
 
+## Image Strategy
+
+This project publishes two Docker images:
+
+1. **Base Image** (`latest`) - Lightweight, transcription-only
+   - Fast build (~27s)
+   - Small size (~500MB)
+   - Suitable for basic transcription workflows
+   - Built on every release
+
+2. **Diarization Image** (`diarization`) - Full feature set
+   - Includes PyTorch and pyannote.audio
+   - Larger size (~3-5GB)
+   - Supports speaker identification
+   - Built only on releases (not on PRs, to save build time)
+
 ## Required Secrets
 
 Configure these secrets in your GitHub repository settings under **Settings > Secrets and variables > Actions**:
@@ -57,11 +73,53 @@ After setting up secrets, the Docker publish workflow will:
 - Trigger automatically on release publication
 - Can be manually triggered via **Actions > Docker CD - Publish Images > Run workflow**
 
+### Manual Workflow Dispatch
+
+To manually publish images:
+```bash
+# Using GitHub CLI
+gh workflow run docker-publish.yml -f version=v0.3.0b3
+
+# Or via GitHub web UI
+# Go to Actions > Docker CD - Publish Images > Run workflow
+# Enter the version tag (e.g., v0.3.0b3)
+```
+
 ## Published Images
 
 Once configured, images will be available at:
+
+**Base Image (transcription-only):**
 - Docker Hub: `docker pull jlcodesource/vtt-transcribe:latest`
 - GHCR: `docker pull ghcr.io/jlcodesource/vtt-transcribe:latest`
+
+**Diarization Image (full feature set):**
+- Docker Hub: `docker pull jlcodesource/vtt-transcribe:diarization`
+- GHCR: `docker pull ghcr.io/jlcodesource/vtt-transcribe:diarization`
+
+### Image Tags
+
+Both registries publish the following tags:
+
+**Base Image:**
+- `latest` - Latest stable release
+- `v0.3.0b3` - Specific version
+- `0.3` - Minor version (tracks latest 0.3.x)
+- `0` - Major version (tracks latest 0.x.x)
+
+**Diarization Image:**
+- `diarization` - Latest stable release
+- `v0.3.0b3-diarization` - Specific version
+- `0.3-diarization` - Minor version
+- `0-diarization` - Major version
+
+## CI/CD Build Strategy
+
+To optimize CI/CD performance:
+
+- **Base image**: Built and tested on all PRs and main branch pushes
+- **Diarization image**: Built and tested only on main branch (skipped for PRs to save ~10-15 minutes build time)
+- **Publishing**: Both images published only on releases or manual workflow dispatch
 
 ## Troubleshooting
 

@@ -82,6 +82,8 @@ jobs:
   docker-build-test-diarization:
     name: Build and Test Diarization Image
     runs-on: ubuntu-latest
+    # Only run diarization builds on main branch (skip for PRs to save build time)
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read
     
