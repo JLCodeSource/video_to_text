@@ -14,7 +14,8 @@ env:
   REGISTRY_IMAGE: jlcodesource/vtt-transcribe
 
 jobs:
-  publish-docker:
+  publish-base:
+    name: Publish Base Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,7 +36,7 @@ jobs:
           # Remove 'v' prefix if present
           VERSION=${VERSION#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Publishing version: $VERSION"
+          echo "Publishing base image version: $VERSION"
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -53,7 +54,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Extract metadata for Docker
+      - name: Extract metadata for base Docker image
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -66,16 +67,17 @@ jobs:
             type=semver,pattern={{major}},value=${{ steps.version.outputs.version }}
             type=raw,value=latest
       
-      - name: Build and push Docker image
+      - name: Build and push base Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=base
+          cache-to: type=gha,mode=max,scope=base
       
       - name: Update Docker Hub description
         uses: peter-evans/dockerhub-description@v4
@@ -85,3 +87,68 @@ jobs:
           repository: ${{ env.REGISTRY_IMAGE }}
           short-description: ${{ github.event.repository.description }}
           readme-filepath: ./README.md
+
+  publish-diarization:
+    name: Publish Diarization Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set version from input or tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+          fi
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing diarization image version: $VERSION"
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata for diarization Docker image
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_IMAGE }}
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}-diarization,value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}}-diarization,value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}-diarization,value=${{ steps.version.outputs.version }}
+            type=raw,value=diarization
+      
+      - name: Build and push diarization Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.diarization
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=diarization
+          cache-to: type=gha,mode=max,scope=diarization

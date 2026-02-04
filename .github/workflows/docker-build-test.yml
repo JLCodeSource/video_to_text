@@ -10,7 +10,8 @@ on:
       - main
 
 jobs:
-  docker-build-test:
+  docker-build-test-base:
+    name: Build and Test Base Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,15 +23,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Build Docker image
+      - name: Build base Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
           push: false
           load: true
           tags: vtt-transcribe:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=base
+          cache-to: type=gha,mode=max,scope=base
       
       - name: Test Docker image - Help command
         run: |
@@ -54,9 +56,9 @@ jobs:
         run: |
           SIZE=$(docker image inspect vtt-transcribe:test --format='{{.Size}}')
           SIZE_MB=$((SIZE / 1024 / 1024))
-          echo "Image size: ${SIZE_MB}MB"
+          echo "Base image size: ${SIZE_MB}MB"
           if [ $SIZE_MB -gt 1000 ]; then
-            echo "⚠ Warning: Image size exceeds 1GB"
+            echo "⚠ Warning: Base image size exceeds 1GB"
           fi
       
       - name: Test stdin mode - Basic functionality
@@ -76,3 +78,59 @@ jobs:
             grep -q "incompatible" && \
             echo "✓ Incompatible -s flag correctly rejected" || \
             echo "✗ Flag validation test failed"
+
+  docker-build-test-diarization:
+    name: Build and Test Diarization Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build diarization Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.diarization
+          push: false
+          load: true
+          tags: vtt-transcribe:diarization-test
+          cache-from: type=gha,scope=diarization
+          cache-to: type=gha,mode=max,scope=diarization
+      
+      - name: Test diarization image - Help command
+        run: |
+          docker run --rm vtt-transcribe:diarization-test --help
+      
+      - name: Test diarization image - Version check
+        run: |
+          docker run --rm vtt-transcribe:diarization-test --version
+      
+      - name: Verify non-root user
+        run: |
+          USER_ID=$(docker run --rm vtt-transcribe:diarization-test sh -c "id -u")
+          if [ "$USER_ID" = "1000" ]; then
+            echo "✓ Running as non-root user (UID: $USER_ID)"
+          else
+            echo "✗ Expected UID 1000, got $USER_ID"
+            exit 1
+          fi
+      
+      - name: Check diarization dependencies
+        run: |
+          docker run --rm vtt-transcribe:diarization-test sh -c "python -c 'import torch; import pyannote.audio; print(f\"torch={torch.__version__}, pyannote.audio available\")'"
+          echo "✓ Diarization dependencies installed"
+      
+      - name: Check image size
+        run: |
+          SIZE=$(docker image inspect vtt-transcribe:diarization-test --format='{{.Size}}')
+          SIZE_MB=$((SIZE / 1024 / 1024))
+          echo "Diarization image size: ${SIZE_MB}MB"
+          if [ $SIZE_MB -gt 5000 ]; then
+            echo "⚠ Warning: Diarization image size exceeds 5GB"
+          fi
