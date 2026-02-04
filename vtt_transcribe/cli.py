@@ -19,6 +19,11 @@ Examples:
   %(prog)s video.mp4 --diarize -s output.txt   # Save diarized transcript
   %(prog)s audio.mp3 --diarize-only            # Only identify speakers
   %(prog)s audio.mp3 --apply-diarization transcript.txt  # Add speakers to existing transcript
+  cat audio.mp3 | %(prog)s                     # Transcribe from stdin (outputs to stdout)
+
+Stdin Mode:
+  When input is piped (not a TTY), %(prog)s reads audio from stdin and writes
+  the transcript to stdout. Incompatible with: -s, -o, --apply-diarization, --scan-chunks
 
 Environment Variables:
   OPENAI_API_KEY    OpenAI API key for transcription
