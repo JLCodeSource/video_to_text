@@ -18,10 +18,10 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml README.md ./
 COPY vtt_transcribe ./vtt_transcribe
 
-# Create virtual environment and install package with dependencies
+# Create virtual environment and install package with dependencies (including diarization)
 RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install .
+RUN uv pip install ".[diarization]"
 
 # Runtime stage: Minimal image with only runtime dependencies
 FROM python:3.13-slim
