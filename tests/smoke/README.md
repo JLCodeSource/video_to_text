@@ -19,6 +19,10 @@ npm install -g bats
 ## Running Tests
 
 ```bash
+# Export environment variables first
+export OPENAI_API_KEY="your-key"
+export HF_TOKEN="your-token"  # Optional, for diarization tests
+
 # Run all smoke tests
 bats tests/smoke/
 
@@ -27,6 +31,9 @@ bats tests/smoke/stdin.bats
 
 # Run with verbose output
 bats -t tests/smoke/stdin.bats
+
+# Or pass environment variables inline
+OPENAI_API_KEY="your-key" bats tests/smoke/stdin.bats
 ```
 
 ## Test Files

@@ -9,14 +9,14 @@ setup() {
     if [[ ! -f "$TEST_AUDIO" ]]; then
         skip "Test audio file not found: $TEST_AUDIO"
     fi
-    
+}
+
+@test "stdin mode: uv run transcribes from stdin" {
     # Skip if OPENAI_API_KEY not set
     if [[ -z "$OPENAI_API_KEY" ]]; then
         skip "OPENAI_API_KEY not set"
     fi
-}
-
-@test "stdin mode: uv run transcribes from stdin" {
+    
     run bash -c "cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py"
     
     [ "$status" -eq 0 ]
@@ -27,6 +27,11 @@ setup() {
     # Skip if vtt not in PATH
     if ! command -v vtt &> /dev/null; then
         skip "vtt not installed"
+    fi
+    
+    # Skip if OPENAI_API_KEY not set
+    if [[ -z "$OPENAI_API_KEY" ]]; then
+        skip "OPENAI_API_KEY not set"
     fi
     
     run bash -c "cat '$TEST_AUDIO' | vtt"
@@ -45,6 +50,11 @@ setup() {
         skip "vtt:latest image not built"
     fi
     
+    # Skip if OPENAI_API_KEY not set
+    if [[ -z "$OPENAI_API_KEY" ]]; then
+        skip "OPENAI_API_KEY not set"
+    fi
+    
     run bash -c "cat '$TEST_AUDIO' | docker run -i -e OPENAI_API_KEY vtt:latest"
     
     [ "$status" -eq 0 ]
@@ -59,6 +69,11 @@ setup() {
     
     if ! docker image inspect vtt:latest &> /dev/null; then
         skip "vtt:latest image not built"
+    fi
+    
+    # Skip if OPENAI_API_KEY not set
+    if [[ -z "$OPENAI_API_KEY" ]]; then
+        skip "OPENAI_API_KEY not set"
     fi
     
     # Create temp file for output
