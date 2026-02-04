@@ -29,10 +29,7 @@ A Python CLI tool (`vtt-transcribe`) that extracts audio from video files and tr
 - **No exceptions**: Don't skip tests, work around them, or document "known failures"
 - **Fix root cause**: If your implementation breaks existing tests, fix the implementation OR fix the test isolation (add proper mocks)
 
-If you run out of time:
-1. Revert your changes: `git reset --hard HEAD~1` (or appropriate commit)
-2. Document what was attempted in beads issue notes
-3. Leave the codebase in a clean, all-tests-passing state
+**If tests are still failing**: Continue cycling through fix attempts until all tests pass. Don't revert - iterate and solve the problem. The session ends when tests are green, not when you're tired.
 
 The next session should start with a green test suite. Period.
 
