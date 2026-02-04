@@ -109,7 +109,7 @@ def _output_result(result: str, *, stdin_mode: bool, save_path: str | None) -> N
 
 def _create_temp_file_from_stdin(args: Namespace) -> Path:
     """Read audio data from stdin and create temporary file.
-    
+
     Returns Path to temporary file that MUST be cleaned up by the caller.
     """
     # Determine file extension from args.input_file or default to .mp3
@@ -178,9 +178,7 @@ def main() -> None:
         sys.exit(1)
     finally:
         # Clean up temp file if created
-        if not stdin_mode or temp_file_path is None:
-            return
-        if temp_file_path.exists():
+        if stdin_mode and temp_file_path is not None and temp_file_path.exists():
             temp_file_path.unlink()
 
 
