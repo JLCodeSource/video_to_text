@@ -1,14 +1,17 @@
-# Multi-stage Dockerfile for vtt-transcribe
+# Multi-stage Dockerfile for vtt-transcribe WITH DIARIZATION
 # Optimized for size and security with non-root user
+# This build includes torch, pyannote.audio, and diarization capabilities
 
 # Build stage: Install dependencies and build
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies required for building
+# Install system dependencies required for building and PyTorch
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast dependency installation
@@ -23,7 +26,7 @@ RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install dependencies first (cached layer unless pyproject.toml changes)
-RUN uv pip install --no-deps ".[dev]" || true && uv pip install -e "."
+RUN uv pip install --no-deps ".[dev]" || true && uv pip install -e ".[diarization]"
 
 # Copy source code AFTER installing dependencies (better caching for development)
 COPY vtt_transcribe ./vtt_transcribe

@@ -34,6 +34,12 @@ setup() {
         echo "# Building vtt:latest Docker image..." >&3
         cd /workspaces/vtt-transcribe && docker build -t vtt:latest . >&3 2>&1
     fi
+    
+    # Build Docker diarization image if not available (for diarization tests)
+    if ! docker image inspect vtt:diarization &> /dev/null; then
+        echo "# Building vtt:diarization Docker image..." >&3
+        cd /workspaces/vtt-transcribe && docker build -f Dockerfile.diarization -t vtt:diarization . >&3 2>&1
+    fi
 }
 
 @test "stdin mode: uv run transcribes from stdin" {
@@ -134,6 +140,28 @@ setup() {
     fi
     
     run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' HF_TOKEN='$HF_TOKEN' && cd /workspaces/vtt-transcribe && cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py --diarize --no-review-speakers --hf-token '$HF_TOKEN' 2>&1"
+    
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "SPEAKER" ]]
+}
+
+@test "stdin mode: docker diarization with env vars" {
+    # Skip if docker not available
+    if ! command -v docker &> /dev/null; then
+        skip "docker not available"
+    fi
+    
+    # Skip if OPENAI_API_KEY not set
+    if [[ -z "$OPENAI_API_KEY" ]]; then
+        skip "OPENAI_API_KEY not set (set in environment or .env file)"
+    fi
+    
+    # Skip if HF_TOKEN not set (needed for diarization)
+    if [[ -z "$HF_TOKEN" ]]; then
+        skip "HF_TOKEN not set (set in environment or .env file)"
+    fi
+    
+    run bash -c "cat '$TEST_AUDIO' | docker run -i -e OPENAI_API_KEY=\"\$OPENAI_API_KEY\" -e HF_TOKEN=\"\$HF_TOKEN\" vtt:diarization --diarize --no-review-speakers --hf-token \"\$HF_TOKEN\""
     
     [ "$status" -eq 0 ]
     [[ "$output" =~ "SPEAKER" ]]
