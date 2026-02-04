@@ -100,13 +100,13 @@ def main() -> None:
             save_transcript(Path(args.save_transcript), result)
 
     except FileNotFoundError as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr, flush=True)
         sys.exit(1)
     except ValueError as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr, flush=True)
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr, flush=True)
         sys.exit(1)
 
 
