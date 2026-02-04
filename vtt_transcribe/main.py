@@ -30,43 +30,41 @@ def get_api_key(api_key_arg: str | None) -> str:
     return api_key
 
 
-def handle_diarization_modes(args: argparse.Namespace) -> bool:
-    """Handle diarization-only and apply-diarization modes. Returns True if handled."""
-    save_path = Path(args.save_transcript) if args.save_transcript else None
-
+def handle_diarization_modes(args: argparse.Namespace) -> str | None:
+    """Handle diarization-only and apply-diarization modes. Returns result string if handled, None otherwise."""
     # Handle diarization-only mode
     if args.diarize_only:
-        diarization_result = handle_diarize_only_mode(Path(args.input_file), args.hf_token, save_path, args.device)
+        diarization_result = handle_diarize_only_mode(Path(args.input_file), args.hf_token, args.device)
 
         # Run review unless disabled
         if not args.no_review_speakers:
-            handle_review_speakers(
+            diarization_result = handle_review_speakers(
                 input_path=None,
                 hf_token=args.hf_token,
-                save_path=save_path,
+                save_path=None,  # Save will be handled in main
                 device=args.device,
                 transcript=diarization_result,
             )
-        return True
+        return diarization_result
 
     # Handle apply-diarization mode
     if args.apply_diarization:
         apply_result = handle_apply_diarization_mode(
-            Path(args.input_file), Path(args.apply_diarization), args.hf_token, save_path, args.device
+            Path(args.input_file), Path(args.apply_diarization), args.hf_token, args.device
         )
 
         # Run review unless disabled
         if not args.no_review_speakers:
-            handle_review_speakers(
+            apply_result = handle_review_speakers(
                 input_path=None,
                 hf_token=args.hf_token,
-                save_path=save_path,
+                save_path=None,  # Save will be handled in main
                 device=args.device,
                 transcript=apply_result,
             )
-        return True
+        return apply_result
 
-    return False
+    return None
 
 
 def _validate_stdin_mode(args: argparse.Namespace, parser: argparse.ArgumentParser, *, stdin_mode: bool) -> None:
@@ -156,7 +154,9 @@ def main() -> None:
             args.input_file = str(temp_file_path)
 
         # Handle diarization modes first (they don't require OpenAI API key)
-        if handle_diarization_modes(args):
+        diarization_result = handle_diarization_modes(args)
+        if diarization_result is not None:
+            _output_result(diarization_result, stdin_mode=stdin_mode, save_path=args.save_transcript)
             return
 
         # Standard transcription flow

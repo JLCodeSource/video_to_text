@@ -14,8 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv for fast dependency installation
-RUN pip install --no-cache-dir uv
+# Install uv for fast dependency installation (pinned for supply chain security)
+RUN pip install --no-cache-dir uv==0.5.19
 
 # Copy only dependency files first (for better layer caching)
 COPY pyproject.toml README.md ./

@@ -36,7 +36,7 @@ def display_result(transcript: str) -> None:
     print(transcript)
 
 
-def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto") -> str:
+def handle_diarize_only_mode(input_path: Path, hf_token: str | None, device: str = "auto") -> str:
     """Handle --diarize-only mode: run diarization without transcription.
 
     Returns:
@@ -67,17 +67,11 @@ def handle_diarize_only_mode(input_path: Path, hf_token: str | None, save_path: 
     if torch_imported and device in ("cuda", "auto") and torch.cuda.is_available():
         print(f"GPU memory after: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
 
-    result = format_diarization_output(segments)
-    display_result(result)
-
-    if save_path:
-        save_transcript(save_path, result)
-
-    return result
+    return format_diarization_output(segments)
 
 
 def handle_apply_diarization_mode(
-    input_path: Path, transcript_path: Path, hf_token: str | None, save_path: Path | None, device: str = "auto"
+    input_path: Path, transcript_path: Path, hf_token: str | None, device: str = "auto"
 ) -> str:
     """Handle --apply-diarization mode: apply diarization to existing transcript.
 
@@ -103,13 +97,7 @@ def handle_apply_diarization_mode(
 
     # Apply speakers to transcript
     print("Applying speaker labels to transcript...")
-    result = diarizer.apply_speakers_to_transcript(transcript, segments)
-    display_result(result)
-
-    if save_path:
-        save_transcript(save_path, result)
-
-    return result
+    return diarizer.apply_speakers_to_transcript(transcript, segments)
 
 
 def _load_transcript_from_input(input_path: Path, hf_token: str | None, device: str) -> str:

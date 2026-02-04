@@ -63,13 +63,12 @@ class TestHandleDiarizeOnlyMode:
     def test_handle_diarize_only_mode_file_not_found(self) -> None:
         """Test that handle_diarize_only_mode raises error for missing file."""
         with pytest.raises(FileNotFoundError, match="Audio file not found"):
-            handle_diarize_only_mode(Path("/nonexistent/file.mp3"), "hf_token", None)
+            handle_diarize_only_mode(Path("/nonexistent/file.mp3"), "hf_token")
 
-    def test_handle_diarize_only_mode_with_save(self, tmp_path: Path) -> None:
-        """Test handle_diarize_only_mode with save_path."""
+    def test_handle_diarize_only_mode(self, tmp_path: Path) -> None:
+        """Test handle_diarize_only_mode returns result without saving."""
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
-        save_path = tmp_path / "output.txt"
 
         with (
             patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
@@ -86,10 +85,9 @@ class TestHandleDiarizeOnlyMode:
                 MagicMock(),
             )
 
-            result = handle_diarize_only_mode(audio_file, "hf_token", save_path)
+            result = handle_diarize_only_mode(audio_file, "hf_token")
 
             assert result == "[00:00:00 - 00:00:05] SPEAKER_00"
-            assert save_path.exists()
 
 
 class TestHandleApplyDiarizationMode:
@@ -101,7 +99,7 @@ class TestHandleApplyDiarizationMode:
         audio_file.write_text("fake audio")
 
         with pytest.raises(FileNotFoundError, match="Transcript file not found"):
-            handle_apply_diarization_mode(audio_file, Path("/nonexistent/transcript.txt"), "hf_token", None)
+            handle_apply_diarization_mode(audio_file, Path("/nonexistent/transcript.txt"), "hf_token")
 
     def test_handle_apply_diarization_mode_audio_not_found(self, tmp_path: Path) -> None:
         """Test that handle_apply_diarization_mode raises error for missing audio."""
@@ -109,15 +107,14 @@ class TestHandleApplyDiarizationMode:
         transcript_file.write_text("[00:00:00 - 00:00:05] Hello")
 
         with pytest.raises(FileNotFoundError, match="Audio file not found"):
-            handle_apply_diarization_mode(Path("/nonexistent/audio.mp3"), transcript_file, "hf_token", None)
+            handle_apply_diarization_mode(Path("/nonexistent/audio.mp3"), transcript_file, "hf_token")
 
-    def test_handle_apply_diarization_mode_with_save(self, tmp_path: Path) -> None:
-        """Test handle_apply_diarization_mode with save_path."""
+    def test_handle_apply_diarization_mode(self, tmp_path: Path) -> None:
+        """Test handle_apply_diarization_mode returns result without saving."""
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("fake audio")
         transcript_file = tmp_path / "transcript.txt"
         transcript_file.write_text("[00:00:00 - 00:00:05] Hello")
-        save_path = tmp_path / "output.txt"
 
         with (
             patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_import,
@@ -134,10 +131,9 @@ class TestHandleApplyDiarizationMode:
                 MagicMock(),
             )
 
-            result = handle_apply_diarization_mode(audio_file, transcript_file, "hf_token", save_path)
+            result = handle_apply_diarization_mode(audio_file, transcript_file, "hf_token")
 
             assert result == "[00:00:00 - 00:00:05] SPEAKER_00: Hello"
-            assert save_path.exists()
 
 
 class TestHandleReviewSpeakers:
