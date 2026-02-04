@@ -334,7 +334,7 @@ class TestNoReviewSpeakersFlag:
 
             main()
 
-            # Verify review WAS called (default behavior)
+            # Verify review WAS called (default behavior when NOT in stdin mode)
             mock_review.assert_called_once()
 
     def test_no_review_speakers_disables_review_for_diarize_only(self, tmp_path: Any) -> None:

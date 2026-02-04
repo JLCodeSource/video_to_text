@@ -43,9 +43,9 @@ class TestDiarizationImportHandling:
 
         assert exc_info.value.code == 1
 
-        # Capture output to check error message (errors print to stdout, not stderr)
+        # Capture output to check error message (errors print to stderr)
         captured = capsys.readouterr()
-        assert "Diarization dependencies not installed" in captured.out
+        assert "Diarization dependencies not installed" in captured.err
 
     def test_diarize_only_without_dependencies_shows_error(self, tmp_path: Path) -> None:
         """Should show error when --diarize-only is used without diarization dependencies."""
@@ -222,7 +222,8 @@ def test_apply_speakers_to_transcript_no_speaker_found() -> None:
     diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
 
     transcript = "[00:10 - 00:15] Hello"
-    speaker_segments = [(0.0, 5.0, "SPEAKER_00")]  # Doesn't overlap with timestamp
+    # Doesn't overlap with timestamp
+    speaker_segments = [(0.0, 5.0, "SPEAKER_00")]
 
     result = diarizer.apply_speakers_to_transcript(transcript, speaker_segments)
 
@@ -434,12 +435,14 @@ def test_get_speaker_context_lines() -> None:
     # First context should include line before and after
     assert "SPEAKER_00: Hello world" in contexts[0]  # before
     assert "SPEAKER_01: This is speaker one" in contexts[0]  # speaker segment
-    assert "SPEAKER_01: More from speaker one" in contexts[0]  # speaker continues
+    # speaker continues
+    assert "SPEAKER_01: More from speaker one" in contexts[0]
     assert "SPEAKER_02: Now speaker two" in contexts[0]  # after
     # Second context
     assert "SPEAKER_02: Speaker two continues" in contexts[1]  # before
     assert "SPEAKER_01: Back to speaker one" in contexts[1]  # speaker segment
-    assert "SPEAKER_01: Still speaker one" in contexts[1]  # same speaker continues
+    # same speaker continues
+    assert "SPEAKER_01: Still speaker one" in contexts[1]
 
 
 def test_diarize_audio_sample_mismatch_error() -> None:
@@ -668,7 +671,8 @@ def test_add_speaker_label_with_hh_mm_ss_format() -> None:
 
     # Test with HH:MM:SS format (hour:minute:second)
     line = "[01:30:45 - 01:30:50] Hello world"
-    segments = [(5445.0, 5450.0, "SPEAKER_00")]  # 1:30:45 = 1*3600 + 30*60 + 45 = 5445s
+    # 1:30:45 = 1*3600 + 30*60 + 45 = 5445s
+    segments = [(5445.0, 5450.0, "SPEAKER_00")]
 
     result = diarizer._process_line(line, segments)
 

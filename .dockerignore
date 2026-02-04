@@ -35,6 +35,7 @@ env/
 htmlcov/
 .tox/
 .hypothesis/
+*.bats
 
 # IDE
 .vscode/
@@ -65,6 +66,14 @@ test_*.txt
 
 # Beads
 .beads/
+
+# Dev container
+.devcontainer/
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
 
 # Makefiles
 Makefile
