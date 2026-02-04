@@ -21,10 +21,12 @@ COPY pyproject.toml README.md ./
 # This layer will be cached unless pyproject.toml changes
 RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install ".[diarization]"
 
-# Copy source code last (so code changes don't invalidate dependency cache)
+# Copy source code before installing (required for package installation)
 COPY vtt_transcribe ./vtt_transcribe
+
+# Install the package (without diarization for faster builds during testing)
+RUN uv pip install "."
 
 # Runtime stage: Minimal image with only runtime dependencies
 FROM python:3.13-slim
@@ -50,6 +52,5 @@ USER vttuser
 # Ensure Python output is unbuffered
 ENV PYTHONUNBUFFERED=1
 
-# Set entrypoint
+# Set entrypoint (no CMD - let stdin detection or user args determine behavior)
 ENTRYPOINT ["vtt"]
-CMD ["--help"]
