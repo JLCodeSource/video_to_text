@@ -2,10 +2,13 @@
 # Smoke tests for stdin mode functionality
 
 setup() {
+    # Determine project root relative to test directory
+    PROJECT_ROOT="${BATS_TEST_DIRNAME}/../.."
+    
     # Load environment variables from .env if it exists and variables aren't already set
-    if [[ -f "/workspaces/vtt-transcribe/.env" ]]; then
+    if [[ -f "${PROJECT_ROOT}/.env" ]]; then
         set -a  # automatically export all variables
-        source "/workspaces/vtt-transcribe/.env"
+        source "${PROJECT_ROOT}/.env"
         set +a
     fi
     
@@ -18,27 +21,27 @@ setup() {
     fi
     
     # Ensure venv is activated or vtt is available
-    if [[ -f "/workspaces/vtt-transcribe/.venv/bin/vtt" ]]; then
-        export PATH="/workspaces/vtt-transcribe/.venv/bin:$PATH"
+    if [[ -f "${PROJECT_ROOT}/.venv/bin/vtt" ]]; then
+        export PATH="${PROJECT_ROOT}/.venv/bin:$PATH"
     fi
     
     # Install vtt if not available (for package tests)
     if ! command -v vtt &> /dev/null; then
         echo "# Installing vtt package..." >&3
-        cd /workspaces/vtt-transcribe && uv pip install -e . >&3 2>&1
-        export PATH="/workspaces/vtt-transcribe/.venv/bin:$PATH"
+        cd "${PROJECT_ROOT}" && uv pip install -e . >&3 2>&1
+        export PATH="${PROJECT_ROOT}/.venv/bin:$PATH"
     fi
     
     # Build Docker image if not available (for Docker tests)
     if ! docker image inspect vtt:latest &> /dev/null; then
         echo "# Building vtt:latest Docker image..." >&3
-        cd /workspaces/vtt-transcribe && docker build -t vtt:latest . >&3 2>&1
+        cd "${PROJECT_ROOT}" && docker build -t vtt:latest . >&3 2>&1
     fi
     
     # Build Docker diarization image if not available (for diarization tests)
     if ! docker image inspect vtt:diarization &> /dev/null; then
         echo "# Building vtt:diarization Docker image..." >&3
-        cd /workspaces/vtt-transcribe && docker build -f Dockerfile.diarization -t vtt:diarization . >&3 2>&1
+        cd "${PROJECT_ROOT}" && docker build -f Dockerfile.diarization -t vtt:diarization . >&3 2>&1
     fi
 }
 
@@ -48,7 +51,7 @@ setup() {
         skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
-    run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' && cd /workspaces/vtt-transcribe && cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py"
+    run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' && cd '$PROJECT_ROOT' && cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py"
     
     [ "$status" -eq 0 ]
     [[ "$output" =~ "hello world" ]] || [[ "$output" =~ "Hello world" ]]

@@ -1,8 +1,9 @@
 name: Docker CD - Publish Images
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -31,7 +32,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ inputs.version }}"
           else
-            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${{ github.ref_name }}"
           fi
           # Remove 'v' prefix if present
           VERSION=${VERSION#v}
@@ -80,6 +81,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=base
       
       - name: Update Docker Hub description
+        if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
         uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -105,7 +107,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ inputs.version }}"
           else
-            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${{ github.ref_name }}"
           fi
           # Remove 'v' prefix if present
           VERSION=${VERSION#v}

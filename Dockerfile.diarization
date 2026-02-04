@@ -33,13 +33,16 @@ RUN uv pip install ".[diarization]"
 # Runtime stage: Minimal image with only runtime dependencies
 FROM python:3.13-slim
 
+# Configurable UID for non-root user (default 1000 for typical Linux desktops)
+ARG USER_UID=1000
+
 # Install only runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN useradd -m -u 1000 vttuser
+RUN useradd -m -u "$USER_UID" vttuser
 
 # Copy virtual environment from builder (includes installed package)
 COPY --from=builder /opt/venv /opt/venv

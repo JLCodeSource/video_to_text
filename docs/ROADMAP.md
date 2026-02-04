@@ -30,6 +30,9 @@ Objective: add local-only Whisper processing and comprehensive packaging options
 - This allows time for upstream dependencies to mature and for proper testing of ffmpeg version detection and fallback mechanisms
 - Packaging strategy can be finalized alongside local processing implementation
 
+## Technical Debt
+- **Torch version locked to 2.8.0**: torch 2.10+ introduced breaking changes to `torch.load(..., weights_only=...)` that cause pyannote.audio 3.1 diarization models to fail. Upgrade to torch 2.10+ once pyannote.audio officially supports it.
+
 ## Features and behavior
 - Local-only processing via ffmpeg + Whisper model: on first run, search PATH for ffmpeg, check its version (must be >= v8 for Whisper compatibility) and notify the user if the system ffmpeg is too old, including instructions to set an environment variable to point to a different ffmpeg binary.
   - Model handling: check for an env var (e.g., WHISPER_MODEL_PATH) that points to a local Whisper model; if absent, offer to download a selected optional Whisper model (show model size and a download link). If automatic download fails, present manual download instructions and ask the user to set the env var to the downloaded model path for next runs.

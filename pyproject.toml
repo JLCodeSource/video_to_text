@@ -38,7 +38,7 @@ Changelog = "https://github.com/JLCodeSource/vtt-transcribe/blob/main/docs/CHANG
 [project.optional-dependencies]
 diarization = [
     "pyannote.audio>=3.1.0",
-    "torch==2.8.0",  # Lock to 2.8.0 (last working version before weights_only breaking change)
+    "torch==2.8.0",  # Pinned due to torch 2.10+ breaking change in weights_only
 ]
 dev = [
     "pytest>=7.4.0",
