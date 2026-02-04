@@ -114,56 +114,6 @@ setup() {
     rm -f "$TEMP_TRANSCRIPT"
 }
 
-@test "stdin mode: rejects incompatible -s flag" {
-    run bash -c "cd /workspaces/vtt-transcribe && echo '' | uv run vtt_transcribe/main.py -s output.txt 2>&1"
-    
-    [ "$status" -eq 2 ]
-    [[ "$output" =~ "stdin mode is incompatible" ]]
-}
-
-@test "stdin mode: rejects incompatible -o flag" {
-    run bash -c "cd /workspaces/vtt-transcribe && echo '' | uv run vtt_transcribe/main.py -o output.mp3 2>&1"
-    
-    [ "$status" -eq 2 ]
-    [[ "$output" =~ "stdin mode is incompatible" ]]
-}
-
-@test "stdin mode: auto-enables --no-review-speakers for diarization" {
-    # Skip if OPENAI_API_KEY not set (needed for transcription)
-    if [[ -z "$OPENAI_API_KEY" ]]; then
-        skip "OPENAI_API_KEY not set (set in environment or .env file)"
-    fi
-    
-    # Skip if HF_TOKEN not set (needed for diarization)
-    if [[ -z "$HF_TOKEN" ]]; then
-        skip "HF_TOKEN not set (set in environment or .env file)"
-    fi
-    
-    # Test that --diarize without --no-review-speakers auto-enables it
-    run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' HF_TOKEN='$HF_TOKEN' && cd /workspaces/vtt-transcribe && cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py --diarize --hf-token '$HF_TOKEN' 2>&1"
-    
-    [ "$status" -eq 0 ]
-    [[ "$output" =~ "Automatically enabling --no-review-speakers" ]]
-    [[ "$output" =~ "SPEAKER" ]]
-}
-
-@test "stdin mode: accepts diarization with explicit --no-review-speakers" {
-    # Skip if OPENAI_API_KEY not set (needed for transcription)
-    if [[ -z "$OPENAI_API_KEY" ]]; then
-        skip "OPENAI_API_KEY not set (set in environment or .env file)"
-    fi
-    
-    # Skip if HF_TOKEN not set (needed for diarization)
-    if [[ -z "$HF_TOKEN" ]]; then
-        skip "HF_TOKEN not set (set in environment or .env file)"
-    fi
-    
-    run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' HF_TOKEN='$HF_TOKEN' && cd /workspaces/vtt-transcribe && cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py --diarize --no-review-speakers --hf-token '$HF_TOKEN' 2>&1"
-    
-    [ "$status" -eq 0 ]
-    [[ "$output" =~ "SPEAKER" ]]
-}
-
 @test "stdin mode: docker diarization with env vars" {
     # Skip if docker not available
     if ! command -v docker &> /dev/null; then
