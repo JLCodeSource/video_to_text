@@ -185,7 +185,8 @@ class TestApiKeyHandling:
             # Verify the API key was passed
             mock_transcribe.assert_called_once()
             call_args = mock_transcribe.call_args
-            assert call_args[0][1] == "test_key_from_env"  # api_key is second arg
+            # api_key is second arg
+            assert call_args[0][1] == "test_key_from_env"
 
     def test_main_with_diarize_requires_api_key(self, tmp_path: Path) -> None:
         """Test that main() with --diarize still requires API key for transcription."""
@@ -196,7 +197,8 @@ class TestApiKeyHandling:
             patch.dict(os.environ, {"OPENAI_API_KEY": "test_key_for_diarize"}),
             patch("sys.argv", ["vtt", str(audio_file), "--diarize", "--device", "cpu"]),
             patch("vtt_transcribe.main.handle_standard_transcription", return_value="Test transcript") as mock_transcribe,
-            patch("vtt_transcribe.main.check_diarization_dependencies"),  # Mock dependency check
+            # Mock dependency check
+            patch("vtt_transcribe.main.check_diarization_dependencies"),
             patch("builtins.print"),
         ):
             main()
@@ -204,7 +206,8 @@ class TestApiKeyHandling:
             # Verify the API key was passed
             mock_transcribe.assert_called_once()
             call_args = mock_transcribe.call_args
-            assert call_args[0][1] == "test_key_for_diarize"  # api_key is second arg
+            # api_key is second arg
+            assert call_args[0][1] == "test_key_for_diarize"
 
 
 class TestMainCliArgumentParsing:
@@ -289,7 +292,8 @@ class TestMainCliArgumentParsing:
                 patch("sys.argv", ["main.py", str(video_path), "--diarize", "--no-review-speakers"]),
                 patch.object(VideoTranscriber, "transcribe", return_value="[00:00:00 - 00:00:05] Hello"),
                 patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy_import,
-                patch("vtt_transcribe.main.check_diarization_dependencies"),  # Mock dependency check
+                # Mock dependency check
+                patch("vtt_transcribe.main.check_diarization_dependencies"),
                 patch("builtins.print"),
             ):
                 mock_diarizer = MagicMock()
@@ -322,7 +326,8 @@ class TestMainCliArgumentParsing:
                 patch("sys.argv", ["main.py", str(video_path), "--diarize", "--device", "cuda", "--no-review-speakers"]),
                 patch.object(VideoTranscriber, "transcribe", return_value="[00:00:00 - 00:00:05] Hello"),
                 patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy_import,
-                patch("vtt_transcribe.main.check_diarization_dependencies"),  # Mock dependency check
+                # Mock dependency check
+                patch("vtt_transcribe.main.check_diarization_dependencies"),
                 patch("builtins.print"),
             ):
                 mock_diarizer = MagicMock()
@@ -352,7 +357,8 @@ class TestMainCliArgumentParsing:
             with (
                 patch("sys.argv", ["main.py", str(audio_path), "--diarize-only", "--no-review-speakers"]),
                 patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy_import,
-                patch("vtt_transcribe.main.check_diarization_dependencies"),  # Mock dependency check
+                # Mock dependency check
+                patch("vtt_transcribe.main.check_diarization_dependencies"),
                 patch("builtins.print"),
             ):
                 mock_diarizer = MagicMock()
@@ -387,7 +393,8 @@ class TestMainCliArgumentParsing:
                     ["main.py", str(audio_path), "--apply-diarization", str(transcript_path), "--no-review-speakers"],
                 ),
                 patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy_import,
-                patch("vtt_transcribe.main.check_diarization_dependencies"),  # Mock dependency check
+                # Mock dependency check
+                patch("vtt_transcribe.main.check_diarization_dependencies"),
                 patch("builtins.print"),
             ):
                 mock_diarizer = MagicMock()
@@ -426,7 +433,8 @@ class TestMainCliArgumentParsing:
                     ["main.py", str(audio_path), "--apply-diarization", str(transcript_path)],
                 ),
                 patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy_import,
-                patch("vtt_transcribe.main.check_diarization_dependencies"),  # Mock dependency check
+                # Mock dependency check
+                patch("vtt_transcribe.main.check_diarization_dependencies"),
                 patch("vtt_transcribe.main.handle_review_speakers") as mock_review,
                 patch("builtins.print"),
             ):
