@@ -2,6 +2,13 @@
 # Smoke tests for stdin mode functionality
 
 setup() {
+    # Load environment variables from .env if it exists and variables aren't already set
+    if [[ -f "/workspaces/vtt-transcribe/.env" ]]; then
+        set -a  # automatically export all variables
+        source "/workspaces/vtt-transcribe/.env"
+        set +a
+    fi
+    
     # Test audio file path
     TEST_AUDIO="${BATS_TEST_DIRNAME}/../hello_conversation.mp3"
     
@@ -9,32 +16,45 @@ setup() {
     if [[ ! -f "$TEST_AUDIO" ]]; then
         skip "Test audio file not found: $TEST_AUDIO"
     fi
+    
+    # Ensure venv is activated or vtt is available
+    if [[ -f "/workspaces/vtt-transcribe/.venv/bin/vtt" ]]; then
+        export PATH="/workspaces/vtt-transcribe/.venv/bin:$PATH"
+    fi
+    
+    # Install vtt if not available (for package tests)
+    if ! command -v vtt &> /dev/null; then
+        echo "# Installing vtt package..." >&3
+        cd /workspaces/vtt-transcribe && uv pip install -e . >&3 2>&1
+        export PATH="/workspaces/vtt-transcribe/.venv/bin:$PATH"
+    fi
+    
+    # Build Docker image if not available (for Docker tests)
+    if ! docker image inspect vtt:latest &> /dev/null; then
+        echo "# Building vtt:latest Docker image..." >&3
+        cd /workspaces/vtt-transcribe && docker build -t vtt:latest . >&3 2>&1
+    fi
 }
 
 @test "stdin mode: uv run transcribes from stdin" {
     # Skip if OPENAI_API_KEY not set
     if [[ -z "$OPENAI_API_KEY" ]]; then
-        skip "OPENAI_API_KEY not set"
+        skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
-    run bash -c "cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py"
+    run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' && cd /workspaces/vtt-transcribe && cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py"
     
     [ "$status" -eq 0 ]
     [[ "$output" =~ "hello world" ]] || [[ "$output" =~ "Hello world" ]]
 }
 
 @test "stdin mode: installed package transcribes from stdin" {
-    # Skip if vtt not in PATH
-    if ! command -v vtt &> /dev/null; then
-        skip "vtt not installed"
-    fi
-    
     # Skip if OPENAI_API_KEY not set
     if [[ -z "$OPENAI_API_KEY" ]]; then
-        skip "OPENAI_API_KEY not set"
+        skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
-    run bash -c "cat '$TEST_AUDIO' | vtt"
+    run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' && cat '$TEST_AUDIO' | vtt"
     
     # Debug output on failure
     if [ "$status" -ne 0 ]; then
@@ -47,18 +67,14 @@ setup() {
 }
 
 @test "stdin mode: docker transcribes from stdin with env var" {
-    # Skip if docker not available or vtt:latest not built
+    # Skip if docker not available
     if ! command -v docker &> /dev/null; then
         skip "docker not available"
     fi
     
-    if ! docker image inspect vtt:latest &> /dev/null; then
-        skip "vtt:latest image not built"
-    fi
-    
     # Skip if OPENAI_API_KEY not set
     if [[ -z "$OPENAI_API_KEY" ]]; then
-        skip "OPENAI_API_KEY not set"
+        skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
     run bash -c "cat '$TEST_AUDIO' | docker run -i -e OPENAI_API_KEY=\"\$OPENAI_API_KEY\" vtt:latest"
@@ -68,18 +84,14 @@ setup() {
 }
 
 @test "stdin mode: docker transcribes with output redirect" {
-    # Skip if docker not available or vtt:latest not built
+    # Skip if docker not available
     if ! command -v docker &> /dev/null; then
         skip "docker not available"
     fi
     
-    if ! docker image inspect vtt:latest &> /dev/null; then
-        skip "vtt:latest image not built"
-    fi
-    
     # Skip if OPENAI_API_KEY not set
     if [[ -z "$OPENAI_API_KEY" ]]; then
-        skip "OPENAI_API_KEY not set"
+        skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
     # Create temp file for output
@@ -97,26 +109,31 @@ setup() {
 }
 
 @test "stdin mode: rejects incompatible -s flag" {
-    run bash -c "echo '' | uv run vtt_transcribe/main.py -s output.txt"
+    run bash -c "cd /workspaces/vtt-transcribe && echo '' | uv run vtt_transcribe/main.py -s output.txt 2>&1"
     
     [ "$status" -eq 2 ]
-    [[ "$output" =~ "incompatible" ]] || [[ "$output" =~ "stdin" ]]
+    [[ "$output" =~ "stdin mode is incompatible" ]]
 }
 
 @test "stdin mode: rejects incompatible -o flag" {
-    run bash -c "echo '' | uv run vtt_transcribe/main.py -o output.mp3"
+    run bash -c "cd /workspaces/vtt-transcribe && echo '' | uv run vtt_transcribe/main.py -o output.mp3 2>&1"
     
     [ "$status" -eq 2 ]
-    [[ "$output" =~ "incompatible" ]] || [[ "$output" =~ "stdin" ]]
+    [[ "$output" =~ "stdin mode is incompatible" ]]
 }
 
 @test "stdin mode: accepts diarization flag" {
-    # Skip if HF_TOKEN not set
-    if [[ -z "$HF_TOKEN" ]]; then
-        skip "HF_TOKEN not set"
+    # Skip if OPENAI_API_KEY not set (needed for transcription)
+    if [[ -z "$OPENAI_API_KEY" ]]; then
+        skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
-    run bash -c "cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py --diarize --no-review-speakers --hf-token '$HF_TOKEN'"
+    # Skip if HF_TOKEN not set (needed for diarization)
+    if [[ -z "$HF_TOKEN" ]]; then
+        skip "HF_TOKEN not set (set in environment or .env file)"
+    fi
+    
+    run bash -c "export OPENAI_API_KEY='$OPENAI_API_KEY' HF_TOKEN='$HF_TOKEN' && cd /workspaces/vtt-transcribe && cat '$TEST_AUDIO' | uv run vtt_transcribe/main.py --diarize --no-review-speakers --hf-token '$HF_TOKEN' 2>&1"
     
     [ "$status" -eq 0 ]
     [[ "$output" =~ "SPEAKER" ]]

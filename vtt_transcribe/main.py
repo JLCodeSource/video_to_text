@@ -36,7 +36,8 @@ def handle_diarization_modes(args: Namespace) -> bool:
 
     # Handle diarization-only mode
     if args.diarize_only:
-        diarization_result = handle_diarize_only_mode(Path(args.input_file), args.hf_token, save_path, args.device)
+        diarization_result = handle_diarize_only_mode(
+            Path(args.input_file), args.hf_token, save_path, args.device)
 
         # Run review unless disabled
         if not args.no_review_speakers:
@@ -52,7 +53,8 @@ def handle_diarization_modes(args: Namespace) -> bool:
     # Handle apply-diarization mode
     if args.apply_diarization:
         apply_result = handle_apply_diarization_mode(
-            Path(args.input_file), Path(args.apply_diarization), args.hf_token, save_path, args.device
+            Path(args.input_file), Path(
+                args.apply_diarization), args.hf_token, save_path, args.device
         )
 
         # Run review unless disabled
@@ -89,7 +91,8 @@ def main() -> None:  # noqa: C901
             incompatible_flags.append("--scan-chunks")
 
         if incompatible_flags:
-            parser.error(f"stdin mode is incompatible with: {', '.join(incompatible_flags)}")
+            parser.error(
+                f"stdin mode is incompatible with: {', '.join(incompatible_flags)}")
 
     # Validate that input_file is provided (unless using --version which is handled by argparse or stdin mode)
     # Note: input_file uses nargs="?" to support --version without requiring input_file.
