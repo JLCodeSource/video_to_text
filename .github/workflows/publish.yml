@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-      - '!v*b*'
   release:
     types: [published]
   workflow_dispatch:
@@ -20,8 +19,27 @@ permissions:
   contents: read
 
 jobs:
+  # Run lint checks before building
+  lint:
+    name: Lint checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --all-extras
+
+      - name: Run lint
+        run: uv run make lint
+
   # Build sdist and core wheels for all platforms/Python versions
   build-core-wheels:
+    needs: [lint]
     name: Build core wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -49,6 +67,7 @@ jobs:
 
   # Build source distribution
   build-sdist:
+    needs: [lint]
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
@@ -71,6 +90,7 @@ jobs:
   # Build diarization wheels (Linux only, Python 3.10-3.13)
   # Only run on main branch or release tags (expensive builds)
   build-diarization-wheels:
+    needs: [lint]
     name: Build diarization wheels (Python ${{ matrix.python }})
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
