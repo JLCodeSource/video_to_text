@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - main
-      - 'feature/**'
   pull_request:
-    branches:
+    branches-ignore:
       - main
 
 jobs:
