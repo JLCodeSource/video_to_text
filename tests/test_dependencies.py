@@ -83,6 +83,15 @@ def test_check_diarization_dependencies_when_missing() -> None:
 
 def test_check_diarization_dependencies_prints_error_message() -> None:
     """Test check_diarization_dependencies() prints helpful error message."""
+    # Skip if diarization dependencies are actually installed
+    try:
+        import pyannote.audio  # noqa: F401
+        import torch  # noqa: F401
+
+        pytest.skip("Diarization dependencies installed, cannot test error message")
+    except ImportError:
+        pass
+
     from vtt_transcribe.dependencies import check_diarization_dependencies
 
     with (
