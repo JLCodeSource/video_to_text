@@ -3,13 +3,13 @@ name: Publish to TestPyPI (OIDC)
 on:
   push:
     tags:
-      - 'v*b*'
+      - 'v*'
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Dry run (build only, no publish)'
         required: false
-        default: 'false'
+        default: 'true'
         type: boolean
 
 permissions:

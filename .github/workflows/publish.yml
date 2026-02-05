@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-      - '!v*b*'
   release:
     types: [published]
   workflow_dispatch:
@@ -21,7 +20,7 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ github.event.release.draft == false || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event.release.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     environment: pypi
     steps:
