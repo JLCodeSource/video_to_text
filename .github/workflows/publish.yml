@@ -56,9 +56,13 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_WINDOWS: "AMD64"
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_BEFORE_TEST_LINUX: "yum install -y ffmpeg || apt-get update && apt-get install -y ffmpeg"
+          CIBW_BEFORE_TEST_MACOS: "brew install ffmpeg"
+          CIBW_BEFORE_TEST_WINDOWS: "choco install ffmpeg -y"
           CIBW_TEST_COMMAND: "nox -s tests_core"
           CIBW_TEST_REQUIRES: "nox"
-          CIBW_SKIP: ""  # include musllinux
+          CIBW_SKIP: ""
 
       - uses: actions/upload-artifact@v4
         with:
@@ -115,9 +119,10 @@ jobs:
         env:
           CIBW_BUILD: "cp${{ matrix.python }}-*"
           CIBW_ARCHS_LINUX: "x86_64"
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_BEFORE_TEST: "apt-get update && apt-get install -y ffmpeg && pip install torch==2.8.0 pyannote.audio>=3.1.0"
           CIBW_TEST_EXTRAS: "diarization,dev"
           CIBW_TEST_COMMAND: "nox -s tests"
-          CIBW_BEFORE_TEST: "pip install torch==2.8.0 pyannote.audio>=3.1.0"
           CIBW_TEST_REQUIRES: "nox"
           CIBW_ENVIRONMENT: "PIP_CACHE_DIR=/tmp/pip-cache"
 
