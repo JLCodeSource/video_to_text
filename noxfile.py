@@ -4,7 +4,7 @@ import nox
 nox.options.sessions = ["tests", "lint"]
 
 
-@nox.session(python=["3.10", "3.11", "3.12", "3.13"])
+@nox.session(python=["3.10", "3.11", "3.12", "3.13", "3.14"])
 def tests(session: nox.Session) -> None:
     """Run the test suite in multiple Python versions.
 

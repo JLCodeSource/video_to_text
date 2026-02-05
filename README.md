@@ -18,7 +18,13 @@ formatting verbose JSON transcripts into readable timestamped output.
  - Interactive speaker review to rename/merge speakers after diarization
 
 ## Dependencies
- - Python 3.13+
+ - Python 3.10+
+
+ Compatibility:
+ - Core package supports Python 3.10 through 3.14 (tests run on 3.10–3.14).
+ - Speaker diarization extras require specific native wheels (torch==2.8.0) and pyannote packages that currently provide prebuilt wheels up to Python 3.13. Therefore, diarization is officially supported up to Python 3.13.
+ - If you run on Python 3.14 and need diarization, you may need to build torch from source or use a compatible wheel; this is not recommended for general users.
+
  - **ffmpeg** (required for video/audio processing via moviepy)
  - moviepy (audio/video helpers)
  - openai (Whisper API client)
