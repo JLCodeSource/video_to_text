@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0b4] - 2026-02-05
+
+### Added
+- **Docker support**: Multi-stage Dockerfile with optimized builds for base and diarization variants
+  - Base image: ~500MB (without diarization dependencies)
+  - Diarization image: ~3GB (with PyTorch and pyannote.audio)
+  - Published to Docker Hub (`jlcodesource/vtt-transcribe`) and GitHub Container Registry (GHCR)
+  - Multi-platform support (linux/amd64, linux/arm64)
+  - Automated CD workflows for Docker image publishing on releases
+- **Stdin/stdout support**: Pipe audio/video data through Docker containers
+  - Auto-detection of stdin input (non-TTY detection via `sys.stdin.isatty()`)
+  - Binary audio data handling with temporary file management
+  - Transcript output to stdout (no file saving in stdin mode)
+  - Speaker review automatically disabled in stdin mode (non-interactive)
+  - Validation: incompatible flags rejected (-s, -o, --apply-diarization, --scan-chunks)
+  - BATS smoke tests for Docker integration testing
+  - Usage: `cat video.mp4 | docker run -i vtt:latest`
+- **Issue tracking**: Migrated from GitHub Issues/Projects to beads CLI
+  - Created beads migration workflow for issue management
+  - Updated documentation and developer workflows for beads
+  - Improved task tracking and synchronization with git
+
+### Changed
+- **Python version support**: Confirmed support for Python 3.10-3.14 across all documentation
+  - Updated CI/CD workflows to test on Python 3.10+
+  - Clarified that Python 3.13+ recommended for diarization features
+- **Test coverage**: Maintained 97% coverage with 247 tests passing
+  - Added comprehensive stdin/stdout mode tests
+  - Fixed test isolation with autouse fixtures for mocking `sys.stdin.isatty()`
+
+### Fixed
+- Documentation consistency: Aligned Python version requirements across README, RELEASE_CHECKLIST, and CI workflows
+- Runtime dependency validation: Added ffmpeg checks before transcription flow execution
+
 ## [0.3.0b3] - 2026-02-01
 
 ### Changed

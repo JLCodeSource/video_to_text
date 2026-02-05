@@ -18,11 +18,11 @@
 - [ ] API documentation current
 
 ### Package Configuration
-- [ ] pyproject.toml version bumped
+- [ ] pyproject.toml version bumped (update `version` field to new release version, e.g., `0.3.0b4`)
 - [ ] Package name correct: `vtt-transcribe`
 - [ ] Entry points configured: `vtt`
 - [ ] Dependencies up to date
-- [ ] Python version requirement verified (>=3.13)
+- [ ] Python version requirement verified (>=3.10)
 
 ### Build & Test
 - [ ] Local build successful: `uv run python -m build`
@@ -36,7 +36,7 @@
 ### Environments
 - [ ] GitHub environment "pypi" configured with protection rules
 - [ ] OIDC Trusted Publisher configured for PyPI
-- [ ] (Optional) TestPyPI environment for testing
+- [ ] TestPyPI environment for testing (mandatory for beta releases, runs in dry-run workflow after merge to main)
 
 ### Workflow
 - [ ] `.github/workflows/publish.yml` configured
@@ -91,6 +91,12 @@ git push origin v0.3.0b3
 - [ ] Check error handling
 - [ ] Test main features work
 
+### Docker Image Verification
+- [ ] Verify Docker images published to Docker Hub: https://hub.docker.com/r/jlcodesource/vtt-transcribe
+- [ ] Verify Docker images published to GHCR: https://github.com/JLCodeSource/vtt-transcribe/pkgs/container/vtt-transcribe
+- [ ] Verify both base and diarization images available
+- [ ] Test Docker image: `docker run --rm jlcodesource/vtt-transcribe:latest --help`
+
 ### Documentation Verification
 - [ ] PyPI page looks correct
 - [ ] Links work (homepage, repository, issues)
@@ -109,9 +115,9 @@ git push origin v0.3.0b3
 - [ ] Prune old worktrees
 
 ### Issue Management
-- [ ] Close completed GitHub issues
-- [ ] Archive completed tasks in project
-- [ ] Update project board
+- [ ] Close completed beads issues: `bd close <id>`
+- [ ] Sync beads with git: `bd sync`
+- [ ] Verify no orphaned tasks: `bd list --status open`
 
 ### Documentation
 - [ ] Update main README with PyPI install
@@ -134,6 +140,6 @@ If something goes wrong:
 - Package name: `vtt-transcribe`
 - Import name: `vtt_transcribe`
 - CLI command: `vtt`
-- Python requirement: >=3.13
+- Python requirement: >=3.10 (3.10-3.14 supported, 3.13+ recommended for diarization)
 - OIDC publishing (no API tokens needed)
 
