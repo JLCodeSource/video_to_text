@@ -145,9 +145,7 @@ cat audio.mp3 | docker run -i -e OPENAI_API_KEY="$OPENAI_API_KEY" jlcodesource/v
 **Docker Image Tags:**
 - `latest` - Latest stable release (base, transcription-only)
 - `diarization` - Latest release with diarization support
-- `0.3.0b3` - Specific version tags
-- `0.3` - Minor version tags (e.g., 0.3.x latest)
-- `0` - Major version tags
+- `0.3.0b3` - Specific version tags (PEP 440 format)
 
 For more Docker usage patterns and troubleshooting, see [Docker Registry Documentation](docs/DOCKER_REGISTRY.md).
 

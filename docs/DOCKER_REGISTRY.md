@@ -104,15 +104,13 @@ Both registries publish the following tags:
 
 **Base Image:**
 - `latest` - Latest stable release
-- `0.3.0b3` - Specific version
-- `0.3` - Minor version (tracks latest 0.3.x)
-- `0` - Major version (tracks latest 0.x.x)
+- `0.3.0b3` - Specific version (PEP 440 format)
 
 **Diarization Image:**
 - `diarization` - Latest stable release
-- `0.3.0b3-diarization` - Specific version
-- `0.3-diarization` - Minor version
-- `0-diarization` - Major version
+- `0.3.0b3-diarization` - Specific version (PEP 440 format)
+
+> **Note:** This project uses [PEP 440](https://peps.python.org/pep-0440/) versioning (e.g., `0.3.0b3` for beta releases). Major and minor version tags (e.g., `0.3`, `0`) are not provided to maintain compatibility with Python packaging standards.
 
 ## CI/CD Build Strategy
 
