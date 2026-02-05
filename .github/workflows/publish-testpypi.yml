@@ -9,7 +9,7 @@ on:
       dry_run:
         description: 'Dry run (build only, no publish)'
         required: false
-        default: 'false'
+        default: 'true'
         type: boolean
 
 permissions:
@@ -144,7 +144,7 @@ jobs:
         run: ls -lh dist/
 
       - name: Publish to TestPyPI via OIDC
-        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run == 'false' || inputs.dry_run == false) }}
+        if: ${{ !inputs.dry_run }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
