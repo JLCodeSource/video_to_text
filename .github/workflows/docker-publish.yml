@@ -78,7 +78,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ !inputs.dry_run }}
+          push: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run == 'false' || inputs.dry_run == false) }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=base
@@ -152,7 +152,7 @@ jobs:
           context: .
           file: ./Dockerfile.diarization
           platforms: linux/amd64,linux/arm64
-          push: ${{ !inputs.dry_run }}
+          push: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run == 'false' || inputs.dry_run == false) }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=diarization

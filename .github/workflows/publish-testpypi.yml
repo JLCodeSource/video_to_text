@@ -144,7 +144,7 @@ jobs:
         run: ls -lh dist/
 
       - name: Publish to TestPyPI via OIDC
-        if: ${{ !inputs.dry_run }}
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run == 'false' || inputs.dry_run == false) }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
