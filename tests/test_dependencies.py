@@ -90,6 +90,7 @@ def test_check_diarization_dependencies_prints_error_message() -> None:
 
         pytest.skip("Diarization dependencies installed, cannot test error message")
     except ImportError:
+        # ImportError is expected when dependencies are not installed - continue with test
         pass
 
     from vtt_transcribe.dependencies import check_diarization_dependencies

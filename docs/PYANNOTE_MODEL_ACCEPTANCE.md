@@ -1,4 +1,4 @@
-Hugging Face Model Terms Acceptance
+# Hugging Face Model Terms Acceptance
 
 Before using the speaker diarization features in vtt-transcribe, the following Hugging Face models require you to accept the model license/terms on their model pages:
 
@@ -10,7 +10,7 @@ Additionally, the speaker embedding model below is typically auto-downloaded and
 
 - pyannote/wespeaker-voxceleb-resnet34-LM — Speaker embedding model (auto-downloaded)
 
-How to accept terms
+## How to accept terms
 
 1. Sign into your Hugging Face account at https://huggingface.co/
 2. Visit each of the model pages listed above (examples):
