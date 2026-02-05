@@ -489,3 +489,119 @@ class TestNoReviewSpeakersFlag:
             # Verify the rename message was printed
             print_calls = [str(call) for call in mock_print.call_args_list]
             assert any("Renamed SPEAKER_00 -> Alice" in call for call in print_calls), "Should print rename confirmation"
+
+
+class TestAudioPathResolution:
+    """Test audio path resolution for diarization."""
+
+    def test_audio_path_for_audio_input(self) -> None:
+        """Test that audio input uses the input path directly."""
+        from unittest.mock import Mock
+
+        # Mock args with audio input
+        args = Mock()
+        args.input_file = "/path/to/audio.mp3"
+        args.output_audio = None
+        args.delete_audio = False
+        args.force = False
+        args.scan_chunks = False
+        args.diarize = True
+        args.hf_token = "test_token"  # noqa: S105
+        args.device = "cpu"
+        args.no_review_speakers = True
+
+        mock_transcriber = MagicMock()
+        mock_transcriber.transcribe.return_value = "test transcript"
+
+        mock_diarizer = MagicMock()
+        mock_diarizer.diarize_audio.return_value = []
+        mock_diarizer.apply_speakers_to_transcript.return_value = "test transcript with speakers"
+
+        with (
+            patch("vtt_transcribe.transcriber.VideoTranscriber", return_value=mock_transcriber) as mock_vt,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy,
+        ):
+            # Set SUPPORTED_AUDIO_FORMATS on mock class
+            mock_vt.SUPPORTED_AUDIO_FORMATS = [".mp3", ".wav"]
+            mock_lazy.return_value = (MagicMock(return_value=mock_diarizer), None, None, None)
+
+            handle_standard_transcription(args, "test_api_key")
+
+            # Should use input path directly for audio
+            mock_diarizer.diarize_audio.assert_called_once()
+            called_path = mock_diarizer.diarize_audio.call_args[0][0]
+            assert str(called_path) == "/path/to/audio.mp3"
+
+    def test_audio_path_with_custom_output(self) -> None:
+        """Test that custom output path is used for diarization."""
+        from unittest.mock import Mock
+
+        args = Mock()
+        args.input_file = "/path/to/video.mp4"
+        args.output_audio = "/custom/audio.mp3"
+        args.delete_audio = False
+        args.force = False
+        args.scan_chunks = False
+        args.diarize = True
+        args.hf_token = "test_token"  # noqa: S105
+        args.device = "cpu"
+        args.no_review_speakers = True
+
+        mock_transcriber = MagicMock()
+        mock_transcriber.transcribe.return_value = "test transcript"
+
+        mock_diarizer = MagicMock()
+        mock_diarizer.diarize_audio.return_value = []
+        mock_diarizer.apply_speakers_to_transcript.return_value = "test transcript with speakers"
+
+        with (
+            patch("vtt_transcribe.transcriber.VideoTranscriber", return_value=mock_transcriber) as mock_vt,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy,
+        ):
+            # Set SUPPORTED_AUDIO_FORMATS on mock class
+            mock_vt.SUPPORTED_AUDIO_FORMATS = [".mp3", ".wav"]
+            mock_lazy.return_value = (MagicMock(return_value=mock_diarizer), None, None, None)
+
+            handle_standard_transcription(args, "test_api_key")
+
+            # Should use custom output path
+            mock_diarizer.diarize_audio.assert_called_once()
+            called_path = mock_diarizer.diarize_audio.call_args[0][0]
+            assert str(called_path) == "/custom/audio.mp3"
+
+    def test_audio_path_default_from_video(self) -> None:
+        """Test that default audio path is derived from video name."""
+        from unittest.mock import Mock
+
+        args = Mock()
+        args.input_file = "/path/to/video.mp4"
+        args.output_audio = None
+        args.delete_audio = False
+        args.force = False
+        args.scan_chunks = False
+        args.diarize = True
+        args.hf_token = "test_token"  # noqa: S105
+        args.device = "cpu"
+        args.no_review_speakers = True
+
+        mock_transcriber = MagicMock()
+        mock_transcriber.transcribe.return_value = "test transcript"
+
+        mock_diarizer = MagicMock()
+        mock_diarizer.diarize_audio.return_value = []
+        mock_diarizer.apply_speakers_to_transcript.return_value = "test transcript with speakers"
+
+        with (
+            patch("vtt_transcribe.transcriber.VideoTranscriber", return_value=mock_transcriber) as mock_vt,
+            patch("vtt_transcribe.handlers._lazy_import_diarization") as mock_lazy,
+        ):
+            # Set SUPPORTED_AUDIO_FORMATS on mock class
+            mock_vt.SUPPORTED_AUDIO_FORMATS = [".mp3", ".wav"]
+            mock_lazy.return_value = (MagicMock(return_value=mock_diarizer), None, None, None)
+
+            handle_standard_transcription(args, "test_api_key")
+
+            # Should use video path with .mp3 extension
+            mock_diarizer.diarize_audio.assert_called_once()
+            called_path = mock_diarizer.diarize_audio.call_args[0][0]
+            assert str(called_path) == "/path/to/video.mp3"

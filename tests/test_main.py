@@ -647,3 +647,154 @@ class TestStdinMode:
         captured = capsys.readouterr()
         # Should see the stdin mode message (not the diarize-only message since stdin runs first)
         assert "Automatically enabling --no-review-speakers" in captured.err
+
+
+class TestVideoFormatDetection:
+    """Test video format detection from binary magic bytes."""
+
+    def test_detect_mp4_format(self) -> None:
+        """Test MP4 format detection from ftyp signature."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        # MP4 file with ftyp signature
+        data = b"\x00\x00\x00\x20ftypmp42\x00\x00\x00\x00" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".mp4"
+
+    def test_detect_m4a_format(self) -> None:
+        """Test M4A format detection."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"\x00\x00\x00\x20ftypM4A \x00\x00\x00\x00" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".mp4"
+
+    def test_detect_mov_format(self) -> None:
+        """Test MOV/QuickTime format detection."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"\x00\x00\x00\x20ftypqt  \x00\x00\x00\x00" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".mp4"
+
+    def test_detect_avi_format(self) -> None:
+        """Test AVI format detection from RIFF+AVI signature."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"RIFF\x00\x00\x00\x00AVI \x00\x00\x00\x00" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".avi"
+
+    def test_detect_webm_format(self) -> None:
+        """Test WebM/MKV format detection from EBML signature."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"\x1a\x45\xdf\xa3" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".webm"
+
+    def test_detect_mp3_id3_format(self) -> None:
+        """Test MP3 format detection from ID3 tag."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"ID3\x03\x00\x00\x00" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".mp3"
+
+    def test_detect_mp3_sync_format(self) -> None:
+        """Test MP3 format detection from MPEG sync byte."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"\xff\xfb" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".mp3"
+
+    def test_detect_wav_format(self) -> None:
+        """Test WAV format detection from RIFF+WAVE signature."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"RIFF\x00\x00\x00\x00WAVE" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".wav"
+
+    def test_detect_ogg_format(self) -> None:
+        """Test OGG format detection from OggS signature."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"OggS\x00\x02\x00\x00" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".ogg"
+
+    def test_detect_unknown_format_defaults_to_mp3(self) -> None:
+        """Test that unknown formats default to .mp3."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"UNKNOWN_FORMAT_DATA" + b"\x00" * 100
+        assert _detect_format_from_data(data) == ".mp3"
+
+    def test_detect_format_with_short_data(self) -> None:
+        """Test format detection with less than 12 bytes (should default to mp3)."""
+        from vtt_transcribe.main import _detect_format_from_data
+
+        data = b"short"
+        assert _detect_format_from_data(data) == ".mp3"
+
+
+class TestStdinTempFileCreation:
+    """Test stdin temp file creation with format detection."""
+
+    def test_create_temp_file_with_filename_arg(self) -> None:
+        """Test that filename argument overrides format detection."""
+        from unittest.mock import Mock
+
+        from vtt_transcribe.main import _create_temp_file_from_stdin
+
+        args = Mock()
+        args.input_file = "video.mp4"
+
+        mp4_data = b"\x00\x00\x00\x20ftypmp42" + b"\x00" * 100
+
+        with patch("sys.stdin.buffer.read", return_value=mp4_data):
+            temp_path = _create_temp_file_from_stdin(args)
+
+            try:
+                assert temp_path.suffix == ".mp4"
+                assert temp_path.exists()
+                assert temp_path.read_bytes() == mp4_data
+            finally:
+                if temp_path.exists():
+                    temp_path.unlink()
+
+    def test_create_temp_file_without_filename_arg(self) -> None:
+        """Test format detection when no filename argument provided."""
+        from unittest.mock import Mock
+
+        from vtt_transcribe.main import _create_temp_file_from_stdin
+
+        args = Mock()
+        args.input_file = None
+
+        mp4_data = b"\x00\x00\x00\x20ftypmp42" + b"\x00" * 100
+
+        with patch("sys.stdin.buffer.read", return_value=mp4_data):
+            temp_path = _create_temp_file_from_stdin(args)
+
+            try:
+                assert temp_path.suffix == ".mp4"
+                assert temp_path.exists()
+                assert temp_path.read_bytes() == mp4_data
+            finally:
+                if temp_path.exists():
+                    temp_path.unlink()
+
+    def test_create_temp_file_webm_detection(self) -> None:
+        """Test WebM format detection in stdin mode."""
+        from unittest.mock import Mock
+
+        from vtt_transcribe.main import _create_temp_file_from_stdin
+
+        args = Mock()
+        args.input_file = None
+
+        webm_data = b"\x1a\x45\xdf\xa3" + b"\x00" * 100
+
+        with patch("sys.stdin.buffer.read", return_value=webm_data):
+            temp_path = _create_temp_file_from_stdin(args)
+
+            try:
+                assert temp_path.suffix == ".webm"
+                assert temp_path.exists()
+            finally:
+                if temp_path.exists():
+                    temp_path.unlink()

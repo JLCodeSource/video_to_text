@@ -682,3 +682,201 @@ def test_add_speaker_label_with_hh_mm_ss_format() -> None:
     result = diarizer._process_line(line, segments)
 
     assert result == "[01:30:45 - 01:30:50] SPEAKER_00: Hello world"
+
+
+class TestWAVConversionFallback:
+    """Test automatic WAV conversion when MP3 encoding causes issues."""
+
+    def test_wav_conversion_triggered_by_sample_mismatch(self) -> None:
+        """Test that sample mismatch error with duration >= 9.5s triggers WAV conversion."""
+        import tempfile
+
+        from vtt_transcribe.diarization import SpeakerDiarizer
+
+        diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp3", delete=False) as f:
+            audio_path = Path(f.name)
+            f.write(b"fake_mp3_data")
+
+        try:
+            # Tracks method calls
+            calls = []
+
+            def mock_internal(_self: object, path: Path) -> list:
+                calls.append(str(path))
+                # First call raises MP3 encoding error (duration >= 9.5s, so conversion triggered)
+                if len(calls) == 1:
+                    # Simulate the processed error message from _diarize_audio_internal
+                    msg = (
+                        "Audio file sample mismatch error. This usually indicates:\n"
+                        "  - MP3 encoding imprecision (metadata doesn't match exact sample count)\n"
+                        "  - File corruption or incomplete download\n"
+                        "Expected 10.00s (441000 samples), but got 9.97s (439895 samples)."
+                    )
+                    raise ValueError(msg)
+                # Second call (with WAV) succeeds
+                return [(0.0, 10.0, "SPEAKER_00")]
+
+            def mock_convert(_self: object, _input_path: Path, output_path: Path) -> None:
+                # Create the WAV file
+                output_path.write_bytes(b"fake_wav_data")
+
+            with (
+                patch.object(SpeakerDiarizer, "_diarize_audio_internal", mock_internal),
+                patch.object(SpeakerDiarizer, "_convert_to_wav", mock_convert),
+            ):
+                result = diarizer.diarize_audio(audio_path)
+
+            # Should have called internal twice: MP3 then WAV
+            assert len(calls) == 2
+            assert calls[0].endswith(".mp3")
+            assert calls[1].endswith(".wav")
+            assert result == [(0.0, 10.0, "SPEAKER_00")]
+
+            # WAV should be cleaned up
+            wav_path = audio_path.with_suffix(".wav")
+            assert not wav_path.exists()
+
+        finally:
+            if audio_path.exists():
+                audio_path.unlink()
+
+    def test_wav_conversion_cleanup_on_retry_failure(self) -> None:
+        """Test that WAV file is cleaned up even when retry fails."""
+        import tempfile
+
+        from vtt_transcribe.diarization import SpeakerDiarizer
+
+        diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp3", delete=False) as f:
+            audio_path = Path(f.name)
+            f.write(b"fake_mp3_data")
+
+        try:
+
+            def mock_internal(_self: object, path: Path) -> list:
+                # Both calls fail
+                if str(path).endswith(".mp3"):
+                    msg = (
+                        "Audio file sample mismatch error. This usually indicates:\n"
+                        "  - MP3 encoding imprecision (metadata doesn't match exact sample count)\n"
+                        "Expected 10.00s (441000 samples), but got 9.97s (439895 samples)."
+                    )
+                    raise ValueError(msg)
+                # WAV also fails
+                msg = "WAV processing also failed"
+                raise RuntimeError(msg)
+
+            def mock_convert(_self: object, _input_path: Path, output_path: Path) -> None:
+                output_path.write_bytes(b"fake_wav_data")
+
+            with (
+                patch.object(SpeakerDiarizer, "_diarize_audio_internal", mock_internal),
+                patch.object(SpeakerDiarizer, "_convert_to_wav", mock_convert),
+                pytest.raises(RuntimeError, match="WAV processing also failed"),
+            ):
+                diarizer.diarize_audio(audio_path)
+
+            # WAV should be cleaned up even on failure
+            wav_path = audio_path.with_suffix(".wav")
+            assert not wav_path.exists()
+
+        finally:
+            if audio_path.exists():
+                audio_path.unlink()
+
+    def test_non_mp3_error_bypasses_conversion(self) -> None:
+        """Test that errors without MP3 encoding text don't trigger conversion."""
+        import tempfile
+
+        from vtt_transcribe.diarization import SpeakerDiarizer
+
+        diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp3", delete=False) as f:
+            audio_path = Path(f.name)
+            f.write(b"fake_data")
+
+        try:
+
+            def mock_internal(_self: object, _path: Path) -> list:
+                msg = "Some other error unrelated to MP3"
+                raise ValueError(msg)
+
+            with (
+                patch.object(SpeakerDiarizer, "_diarize_audio_internal", mock_internal),
+                pytest.raises(ValueError, match="Some other error unrelated to MP3"),
+            ):
+                diarizer.diarize_audio(audio_path)
+
+        finally:
+            if audio_path.exists():
+                audio_path.unlink()
+
+    def test_convert_to_wav_success(self) -> None:
+        """Test WAV conversion using ffmpeg."""
+        import tempfile
+        from unittest.mock import Mock
+
+        from vtt_transcribe.diarization import SpeakerDiarizer
+
+        diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
+
+        with (
+            tempfile.NamedTemporaryFile(mode="wb", suffix=".mp3", delete=False) as f1,
+            tempfile.NamedTemporaryFile(mode="wb", suffix=".wav", delete=False) as f2,
+        ):
+            input_path = Path(f1.name)
+            output_path = Path(f2.name)
+            f1.write(b"fake_mp3")
+
+        try:
+            # Mock subprocess to succeed
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stderr = ""
+
+            with patch("subprocess.run", return_value=mock_result):
+                diarizer._convert_to_wav(input_path, output_path)
+
+        finally:
+            if input_path.exists():
+                input_path.unlink()
+            if output_path.exists():
+                output_path.unlink()
+
+    def test_convert_to_wav_failure(self) -> None:
+        """Test WAV conversion failure handling."""
+        import tempfile
+        from unittest.mock import Mock
+
+        from vtt_transcribe.diarization import SpeakerDiarizer
+
+        diarizer = SpeakerDiarizer(hf_token="test_token")  # noqa: S106
+
+        with (
+            tempfile.NamedTemporaryFile(mode="wb", suffix=".mp3", delete=False) as f1,
+            tempfile.NamedTemporaryFile(mode="wb", suffix=".wav", delete=False) as f2,
+        ):
+            input_path = Path(f1.name)
+            output_path = Path(f2.name)
+
+        try:
+            # Mock subprocess to fail
+            mock_result = Mock()
+            mock_result.returncode = 1
+            mock_result.stderr = "ffmpeg error: invalid file"
+
+            with (
+                patch("subprocess.run", return_value=mock_result),
+                pytest.raises(RuntimeError, match="Failed to convert to WAV"),
+            ):
+                diarizer._convert_to_wav(input_path, output_path)
+
+        finally:
+            if input_path.exists():
+                input_path.unlink()
+            if output_path.exists():
+                output_path.unlink()
