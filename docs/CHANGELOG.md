@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Python version support**: Confirmed support for Python 3.10-3.14 across all documentation
   - Updated CI/CD workflows to test on Python 3.10+
   - Clarified that Python 3.13+ recommended for diarization features
-- **Test coverage**: Maintained 97% coverage with 247 tests passing
+- **Test coverage**: Maintained 96% coverage with 254 tests passing
   - Added comprehensive stdin/stdout mode tests
   - Fixed test isolation with autouse fixtures for mocking `sys.stdin.isatty()`
 
