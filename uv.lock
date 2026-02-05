@@ -4753,7 +4753,7 @@ dev = [
 ]
 diarization = [
     { name = "pyannote-audio" },
-    { name = "torch" },
+    { name = "torch", marker = "python_full_version < '3.14'" },
 ]
 
 [package.dev-dependencies]
@@ -4782,7 +4782,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "torch", marker = "extra == 'diarization'", specifier = "==2.8.0" },
+    { name = "torch", marker = "python_full_version < '3.14' and extra == 'diarization'", specifier = "==2.8.0" },
     { name = "twine", marker = "extra == 'build'", specifier = ">=4.0.0" },
 ]
 provides-extras = ["diarization", "dev", "build"]
