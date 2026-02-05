@@ -126,6 +126,8 @@ def _detect_format_from_data(data: bytes) -> str:
         if brand.startswith((b"isom", b"iso2", b"mp41", b"mp42", b"M4A ", b"M4V ", b"qt  ")):
             # Could be mp4, m4a, or mov - default to mp4 for video
             return ".mp4"
+        # Fallback: any file with an 'ftyp' box is an ISO-BMFF/MP4-family file
+        return ".mp4"
 
     # AVI - RIFF header with AVI signature
     if data[0:4] == b"RIFF" and data[8:12] == b"AVI ":
@@ -160,7 +162,10 @@ def _create_temp_file_from_stdin(args: Namespace) -> Path:
     audio_data = sys.stdin.buffer.read()
 
     # Determine file extension from args.input_file or detect from data
-    extension = Path(args.input_file).suffix or ".mp3" if args.input_file else _detect_format_from_data(audio_data)
+    if args.input_file:  # noqa: SIM108
+        extension = Path(args.input_file).suffix or ".mp3"
+    else:
+        extension = _detect_format_from_data(audio_data)
 
     # Create temp file with appropriate extension
     with tempfile.NamedTemporaryFile(mode="wb", suffix=extension, delete=False) as temp_file:

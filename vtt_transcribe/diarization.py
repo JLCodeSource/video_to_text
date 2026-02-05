@@ -168,6 +168,8 @@ class SpeakerDiarizer:
 
         cmd = [
             "ffmpeg",
+            "-loglevel",
+            "error",
             "-i",
             str(input_path),
             "-acodec",
