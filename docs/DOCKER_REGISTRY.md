@@ -77,12 +77,13 @@ After setting up secrets, the Docker publish workflow will:
 
 To manually publish images:
 ```bash
-# Using GitHub CLI
+# Using GitHub CLI (note: input version includes 'v' prefix, output tags will not)
 gh workflow run docker-publish.yml -f version=v0.3.0b3
 
 # Or via GitHub web UI
 # Go to Actions > Docker CD - Publish Images > Run workflow
-# Enter the version tag (e.g., v0.3.0b3)
+# Enter the version tag with 'v' prefix (e.g., v0.3.0b3)
+# The workflow strips the 'v' when publishing Docker tags
 ```
 
 ## Published Images
@@ -103,13 +104,13 @@ Both registries publish the following tags:
 
 **Base Image:**
 - `latest` - Latest stable release
-- `v0.3.0b3` - Specific version
+- `0.3.0b3` - Specific version
 - `0.3` - Minor version (tracks latest 0.3.x)
 - `0` - Major version (tracks latest 0.x.x)
 
 **Diarization Image:**
 - `diarization` - Latest stable release
-- `v0.3.0b3-diarization` - Specific version
+- `0.3.0b3-diarization` - Specific version
 - `0.3-diarization` - Minor version
 - `0-diarization` - Major version
 

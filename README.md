@@ -139,7 +139,7 @@ cat audio.mp3 | docker run -i -e OPENAI_API_KEY jlcodesource/vtt-transcribe:late
 **Docker Image Tags:**
 - `latest` - Latest stable release (base, transcription-only)
 - `diarization` - Latest release with diarization support
-- `v0.3.0b3` - Specific version tags
+- `0.3.0b3` - Specific version tags
 - `0.3` - Minor version tags (e.g., 0.3.x latest)
 - `0` - Major version tags
 
