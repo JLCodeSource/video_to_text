@@ -9,6 +9,11 @@ on:
         description: 'Version tag (e.g., v0.3.0b3)'
         required: true
         type: string
+      dry_run:
+        description: 'Dry run (build only, do not push images)'
+        required: false
+        default: 'true'
+        type: boolean
 
 env:
   REGISTRY_IMAGE: jlcodesource/vtt-transcribe
@@ -73,7 +78,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ !inputs.dry_run }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=base
@@ -147,7 +152,7 @@ jobs:
           context: .
           file: ./Dockerfile.diarization
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ !inputs.dry_run }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=diarization
