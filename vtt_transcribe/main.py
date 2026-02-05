@@ -117,7 +117,8 @@ def _detect_format_from_data(data: bytes) -> str:
     Falls back to .mp3 if format cannot be determined.
     """
     if not data:
-        raise ValueError("Cannot detect format from empty data stream.")
+        msg = "Cannot detect format from empty data stream."
+        raise ValueError(msg)
     if len(data) < 12:
         return ".mp3"
 
