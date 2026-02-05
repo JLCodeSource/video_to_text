@@ -282,7 +282,7 @@ class VideoTranscriber:
 
         # Transcribe
         if file_size_mb > self.MAX_SIZE_MB:
-            print(f"Audio file is {file_size_mb:.1f}MB (limit: {self.MAX_SIZE_MB}MB). Chunking...")
+            print(f"Input file is {file_size_mb:.1f}MB (limit: {self.MAX_SIZE_MB}MB). Chunking...")
             duration = self.get_audio_duration(audio_path)
             num_chunks, chunk_duration = self.calculate_chunk_params(file_size_mb, duration)
             result = self.transcribe_chunked_audio(
