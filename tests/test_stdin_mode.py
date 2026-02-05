@@ -252,3 +252,52 @@ class TestStdinIntegration:
 
             output = mock_stdout.getvalue()
             assert "SPEAKER_00: Hello" in output
+
+    def test_stdin_mode_output_ends_with_newline(self, mock_stdin_tty: MagicMock) -> None:
+        """Test that stdin mode output always ends with a newline."""
+        fake_audio = b"RIFF....WAVEfmt " + b"x" * 100
+
+        with (
+            patch("vtt_transcribe.main.sys.stdin") as mock_stdin,
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch("sys.argv", ["vtt", "-k", "test-key"]),
+            patch("vtt_transcribe.main.handle_standard_transcription", return_value="[00:00 - 00:05] Hello world"),
+        ):
+            mock_stdin.isatty.return_value = False
+            mock_stdin.buffer.read.return_value = fake_audio
+
+            # Should process and output to stdout
+            main()
+
+            output = mock_stdout.getvalue()
+            # Output should end with a newline to prevent prompt on same line
+            assert output.endswith("\n"), "stdout output should end with a newline"
+
+    def test_stdin_mode_without_filename_defaults_to_mp3(self, mock_stdin_tty: MagicMock) -> None:
+        """Test that stdin without filename argument creates temp file with .mp3 extension."""
+        fake_video_data = b"video data"
+
+        with (
+            patch("vtt_transcribe.main.sys.stdin") as mock_stdin,
+            patch("sys.stdout", new_callable=io.StringIO),
+            patch("sys.argv", ["vtt", "-k", "test-key"]),  # No filename arg
+            patch("vtt_transcribe.main.handle_standard_transcription", return_value="transcript"),
+            patch("tempfile.NamedTemporaryFile") as mock_tempfile,
+        ):
+            # Setup temp file mock
+            mock_temp_instance = MagicMock()
+            mock_temp_instance.name = "/tmp/tempXYZ.mp3"  # noqa: S108
+            mock_temp_instance.__enter__.return_value = mock_temp_instance
+            mock_temp_instance.__exit__.return_value = False
+            mock_tempfile.return_value = mock_temp_instance
+
+            mock_stdin.isatty.return_value = False
+            mock_stdin.buffer.read.return_value = fake_video_data
+
+            # Should create temp file with .mp3 extension by default
+            main()
+
+            # Verify temp file was created with .mp3 suffix
+            mock_tempfile.assert_called_once()
+            call_kwargs = mock_tempfile.call_args[1]
+            assert call_kwargs["suffix"] == ".mp3", "Default suffix should be .mp3 when no filename provided"

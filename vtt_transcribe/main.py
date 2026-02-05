@@ -100,6 +100,9 @@ def _output_result(result: str, *, stdin_mode: bool, save_path: str | None) -> N
     """Output transcription result to stdout or display, and optionally save."""
     if stdin_mode:
         sys.stdout.write(result)
+        # Ensure output ends with a newline to prevent shell prompt on same line
+        if not result.endswith("\n"):
+            sys.stdout.write("\n")
     else:
         display_result(result)
 
