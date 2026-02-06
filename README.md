@@ -101,10 +101,11 @@ uv pip install vtt-transcribe[diarization]
 
 ### Using Docker (Alternative)
 
-Docker images are available on Docker Hub and GitHub Container Registry in two variants:
+Docker images are available on Docker Hub and GitHub Container Registry in three variants:
 
 - **Base image** (`latest`): Fast, lightweight, transcription-only (~27s build)
-- **Diarization image** (`diarization`): Full feature set with PyTorch and speaker diarization
+- **Diarization image** (`diarization`): Speaker diarization with PyTorch (CPU-only)
+- **Diarization GPU image** (`diarization-gpu`): GPU-accelerated speaker diarization with CUDA 12.8
 
 ```bash
 # Pull from Docker Hub (base image)
