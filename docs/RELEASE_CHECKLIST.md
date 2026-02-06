@@ -144,3 +144,10 @@ If something goes wrong:
 - Python requirement: >=3.10 (3.10-3.14 supported, 3.13+ recommended for diarization)
 - OIDC publishing (no API tokens needed)
 
+### Smoke Tests
+- Run `bats tests/smoke/standard.bats` and ensure all tests pass.
+- Run `bats tests/smoke/stdin.bats` and ensure all tests pass.
+
+### Nox Tests
+- Run `nox` to execute all defined sessions and ensure they pass.
+
