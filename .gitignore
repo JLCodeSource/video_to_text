@@ -5,6 +5,7 @@
 *.wav
 *.m4a
 *.mp4
+!/tests/*.mp4
 *.txt
 
 .copilot-worktrees/

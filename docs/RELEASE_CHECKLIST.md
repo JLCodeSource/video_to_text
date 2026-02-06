@@ -9,6 +9,7 @@
 - [ ] Pre-commit hooks passing
 - [ ] Code coverage ≥ 95%
 - [ ] Test coverage 100% on all vtt_transcribe files (99% is acceptable if only `if __name__ == "__main__"` guard is uncovered)
+- [ ] Smoke tests passing: `bats tests/smoke/*.bats`
 
 ### Documentation
 - [ ] README.md updated with correct version
@@ -142,4 +143,11 @@ If something goes wrong:
 - CLI command: `vtt`
 - Python requirement: >=3.10 (3.10-3.14 supported, 3.13+ recommended for diarization)
 - OIDC publishing (no API tokens needed)
+
+### Smoke Tests
+- Run `bats tests/smoke/standard.bats` and ensure all tests pass.
+- Run `bats tests/smoke/stdin.bats` and ensure all tests pass.
+
+### Nox Tests
+- Run `nox` to execute all defined sessions and ensure they pass.
 

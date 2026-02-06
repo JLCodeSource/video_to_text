@@ -32,16 +32,24 @@ setup() {
         export PATH="${PROJECT_ROOT}/.venv/bin:$PATH"
     fi
     
-    # Build Docker image if not available (for Docker tests)
-    if ! docker image inspect vtt:latest &> /dev/null; then
+    # Build Docker image if not available or force rebuild requested
+    if [[ "$FORCE_DOCKER_REBUILD" == "1" ]] || ! docker image inspect vtt:latest &> /dev/null; then
         echo "# Building vtt:latest Docker image..." >&3
-        cd "${PROJECT_ROOT}" && docker build -t vtt:latest . >&3 2>&1
+        BUILD_FLAGS=""
+        if [[ "$DOCKER_NO_CACHE" == "1" ]]; then
+            BUILD_FLAGS="--no-cache"
+        fi
+        cd "${PROJECT_ROOT}" && docker build $BUILD_FLAGS -t vtt:latest . >&3 2>&1
     fi
     
-    # Build Docker diarization image if not available (for diarization tests)
-    if ! docker image inspect vtt:diarization &> /dev/null; then
+    # Build Docker diarization image if not available or force rebuild requested
+    if [[ "$FORCE_DOCKER_REBUILD" == "1" ]] || ! docker image inspect vtt:diarization &> /dev/null; then
         echo "# Building vtt:diarization Docker image..." >&3
-        cd "${PROJECT_ROOT}" && docker build -f Dockerfile.diarization -t vtt:diarization . >&3 2>&1
+        BUILD_FLAGS=""
+        if [[ "$DOCKER_NO_CACHE" == "1" ]]; then
+            BUILD_FLAGS="--no-cache"
+        fi
+        cd "${PROJECT_ROOT}" && docker build $BUILD_FLAGS -f Dockerfile.diarization -t vtt:diarization . >&3 2>&1
     fi
 }
 
