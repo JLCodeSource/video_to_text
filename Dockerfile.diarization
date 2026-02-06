@@ -24,9 +24,10 @@ COPY pyproject.toml README.md ./
 RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install PyTorch first in its own layer (~2.5GB)
+# Install PyTorch + torchaudio (CPU-only) in their own layer (~2.5GB)
 # This keeps individual layers under Docker Hub's per-blob size limit
-RUN uv pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+# Both must come from the CPU index to avoid CUDA dependency (libtorch_cuda.so)
+RUN uv pip install torch==2.8.0 torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Install remaining diarization dependencies in a separate layer
 RUN uv pip install pyannote.audio
