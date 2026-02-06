@@ -108,6 +108,6 @@ Tests will skip gracefully if requirements are not met.
 
 | Tag | Dockerfile | Arch | Size | Use Case |
 |-----|-----------|------|------|----------|
-| `latest` | `Dockerfile` | amd64, arm64 | ~200 MB | Transcription only |
+| `latest` | `Dockerfile` | amd64, arm64 | ~500 MB | Transcription only |
 | `diarization` | `Dockerfile.diarization` | amd64, arm64 | ~2.5 GB | Speaker diarization (CPU) |
 | `diarization-gpu` | `Dockerfile.diarization-gpu` | amd64 | ~8 GB | Speaker diarization (CUDA GPU, 10-100x faster) |
