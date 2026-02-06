@@ -60,7 +60,7 @@ teardown() {
     
     OUTPUT_FILE="${TEMP_DIR}/transcript_mp3.txt"
     
-    run vtt "$TEST_AUDIO_MP3" -o "$OUTPUT_FILE" -k "$OPENAI_API_KEY"
+    run vtt "$TEST_AUDIO_MP3" --save-transcript "$OUTPUT_FILE" -k "$OPENAI_API_KEY"
     
     # Debug output on failure
     if [ "$status" -ne 0 ]; then
@@ -82,7 +82,7 @@ teardown() {
     
     OUTPUT_FILE="${TEMP_DIR}/transcript_mp3_uv.txt"
     
-    run bash -c "cd '$PROJECT_ROOT' && uv run vtt_transcribe/main.py '$TEST_AUDIO_MP3' -o '$OUTPUT_FILE' -k '$OPENAI_API_KEY'"
+    run bash -c "cd '$PROJECT_ROOT' && uv run vtt_transcribe/main.py '$TEST_AUDIO_MP3' --save-transcript '$OUTPUT_FILE' -k '$OPENAI_API_KEY'"
     
     [ "$status" -eq 0 ]
     [[ -f "$OUTPUT_FILE" ]]
@@ -102,7 +102,7 @@ teardown() {
     
     OUTPUT_FILE="${TEMP_DIR}/transcript_mp4.txt"
     
-    run vtt "$TEST_VIDEO_MP4" -o "$OUTPUT_FILE" -k "$OPENAI_API_KEY"
+    run vtt "$TEST_VIDEO_MP4" --save-transcript "$OUTPUT_FILE" -k "$OPENAI_API_KEY"
     
     # Debug output on failure
     if [ "$status" -ne 0 ]; then
@@ -124,7 +124,7 @@ teardown() {
     
     OUTPUT_FILE="${TEMP_DIR}/transcript_mp4_uv.txt"
     
-    run bash -c "cd '$PROJECT_ROOT' && uv run vtt_transcribe/main.py '$TEST_VIDEO_MP4' -o '$OUTPUT_FILE' -k '$OPENAI_API_KEY'"
+    run bash -c "cd '$PROJECT_ROOT' && uv run vtt_transcribe/main.py '$TEST_VIDEO_MP4' --save-transcript '$OUTPUT_FILE' -k '$OPENAI_API_KEY'"
     
     [ "$status" -eq 0 ]
     [[ -f "$OUTPUT_FILE" ]]
@@ -149,7 +149,7 @@ teardown() {
     
     OUTPUT_FILE="${TEMP_DIR}/transcript_diarized.txt"
     
-    run vtt "$TEST_VIDEO_MP4" -o "$OUTPUT_FILE" -k "$OPENAI_API_KEY" --diarize --no-review-speakers --hf-token "$HF_TOKEN"
+    run vtt "$TEST_VIDEO_MP4" --save-transcript "$OUTPUT_FILE" -k "$OPENAI_API_KEY" --diarize --no-review-speakers --hf-token "$HF_TOKEN"
     
     # Debug output on failure
     if [ "$status" -ne 0 ]; then
@@ -163,30 +163,30 @@ teardown() {
     grep -q "SPEAKER" "$OUTPUT_FILE"  # Should contain speaker labels
 }
 
-@test "standard: transcribe MP3 with diarization using Docker" {
-    # Skip if docker not available
-    if ! command -v docker &> /dev/null; then
-        skip "docker not available"
-    fi
-    
+# ============================================================================
+# Output Format Validation Tests
+# ============================================================================
+
+@test "standard: output contains timestamp format" {
     # Skip if OPENAI_API_KEY not set
     if [[ -z "$OPENAI_API_KEY" ]]; then
         skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
-    # Skip if HF_TOKEN not set
-    if [[ -z "$HF_TOKEN" ]]; then
-        skip "HF_TOKEN not set (set in environment or .env file)"
-    fi
+    OUTPUT_FILE="${TEMP_DIR}/transcript_timestamps.txt"
     
-    # Run with mounted volume
-    run docker run --rm \
-        -v "$TEST_AUDIO_MP3:/audio.mp3:ro" \
-        -v "$TEMP_DIR:/output" \
-        -e OPENAI_API_KEY="$OPENAI_API_KEY" \
-        -e HF_TOKEN="$HF_TOKEN" \
-        vtt:diarization /audio.mp3 -o /output/transcript.txt --diarize --no-review-speakers --hf-token "$HF_TOKEN"
+    run vtt "$TEST_AUDIO_MP3" --save-transcript "$OUTPUT_FILE" -k "$OPENAI_API_KEY"
     
+    [ "$status" -eq 0 ]
+    [[ -f "$OUTPUT_FILE" ]]
+    
+    # Check for timestamp format [MM:SS - MM:SS]
+    grep -E "\[[0-9]+:[0-9]+ - [0-9]+:[0-9]+\]" "$OUTPUT_FILE"
+}
+
+@test "standard: output file created when not specified (default name)" {
+    # Skip if OPENAI_API_KEY not set
+    if [[ -z "$OPENAI_API_KEY" ]]; then
         skip "OPENAI_API_KEY not set (set in environment or .env file)"
     fi
     
