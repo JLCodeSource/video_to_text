@@ -39,7 +39,9 @@ RUN uv pip install pyannote.audio
 COPY vtt_transcribe ./vtt_transcribe
 
 # Install the package itself (uses already-installed torch + pyannote)
-RUN uv pip install ".[diarization]"
+# Remove torchcodec — it's pulled by pyannote.audio but is ABI-incompatible
+# with torch 2.8.0; pyannote falls back to torchaudio which we have installed
+RUN uv pip install ".[diarization]" && uv pip uninstall torchcodec
 
 # Prepare a copy of site-packages without the large dirs (for split COPY layers)
 RUN cp -a /opt/venv/lib/python3.12/site-packages /opt/venv/site-packages-rest \

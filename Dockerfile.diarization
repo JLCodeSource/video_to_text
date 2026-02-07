@@ -36,7 +36,9 @@ RUN uv pip install pyannote.audio
 COPY vtt_transcribe ./vtt_transcribe
 
 # Install the package itself (uses already-installed torch + pyannote)
-RUN uv pip install ".[diarization]"
+# Remove torchcodec — it's pulled by pyannote.audio but is ABI-incompatible
+# with torch 2.8.0; pyannote falls back to torchaudio which we have installed
+RUN uv pip install ".[diarization]" && uv pip uninstall torchcodec
 
 # Runtime stage: Minimal image with only runtime dependencies
 FROM python:3.13-slim
