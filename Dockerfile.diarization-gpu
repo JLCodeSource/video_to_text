@@ -54,8 +54,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN useradd -m -u "$USER_UID" vttuser
+# Create non-root user (NVIDIA base image may already have UID 1000)
+RUN useradd -m -u "$USER_UID" vttuser 2>/dev/null \
+    || useradd -m vttuser
 
 # Copy virtual environment from builder in separate layers to keep each
 # layer under Docker Hub's per-blob size limit
